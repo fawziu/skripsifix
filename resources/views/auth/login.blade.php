@@ -97,27 +97,12 @@
                 </button>
             </div>
 
-            <!-- Social Login (Optional) -->
-            <div class="mt-6">
-                <div class="relative">
-                    <div class="absolute inset-0 flex items-center">
-                        <div class="w-full border-t border-gray-300"></div>
-                    </div>
-                    <div class="relative flex justify-center text-sm">
-                        <span class="px-2 bg-gray-50 text-gray-500">Atau masuk dengan</span>
-                    </div>
-                </div>
-
-                <div class="mt-6 grid grid-cols-2 gap-3">
-                    <button type="button" class="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors">
-                        <i class="fab fa-google text-red-500 mr-2"></i>
-                        Google
-                    </button>
-                    <button type="button" class="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors">
-                        <i class="fab fa-facebook text-blue-600 mr-2"></i>
-                        Facebook
-                    </button>
-                </div>
+            <!-- Daftar akun baru -->
+            <div class="mt-6 text-center">
+                <span class="text-gray-600 text-sm">Belum punya akun?</span>
+                <a href="{{ route('register') }}" class="font-medium text-blue-600 hover:text-blue-500 transition-colors ml-1">
+                    Daftar akun
+                </a>
             </div>
         </form>
     </div>

@@ -108,14 +108,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/complaints', [ComplaintController::class, 'store'])->name('complaints.store');
     });
     
-    // Admin routes for complaint management
-    Route::middleware('admin')->group(function () {
-        Route::get('/complaints/{complaint}/edit', function ($complaint) {
-            return view('complaints.edit', compact('complaint'));
-        })->name('complaints.edit');
-        
-        Route::put('/complaints/{complaint}', [ComplaintController::class, 'update'])->name('complaints.update');
-    });
+    // Complaint edit routes (accessible to admin and complaint owner)
+    Route::get('/complaints/{complaint}/edit', [ComplaintController::class, 'edit'])->name('complaints.edit');
+    Route::put('/complaints/{complaint}', [ComplaintController::class, 'update'])->name('complaints.update');
 
     // Admin routes for user management
     Route::middleware('admin')->group(function () {

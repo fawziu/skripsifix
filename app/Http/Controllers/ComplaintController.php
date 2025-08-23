@@ -55,7 +55,7 @@ class ComplaintController extends Controller
     /**
      * Create a new complaint
      */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
@@ -66,11 +66,16 @@ class ComplaintController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors(),
-            ], 422);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
         }
 
         try {
@@ -80,26 +85,168 @@ class ComplaintController extends Controller
             if ($request->order_id) {
                 $order = \App\Models\Order::find($request->order_id);
                 if (!$user->isAdmin() && $order->customer_id !== $user->id && $order->courier_id !== $user->id) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Access denied to this order',
-                    ], 403);
+                    if ($request->expectsJson()) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Access denied to this order',
+                        ], 403);
+                    }
+                    return redirect()->back()->with('error', 'Access denied to this order.');
                 }
             }
 
             $complaint = $this->complaintService->createComplaint($request->all(), $user);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Complaint created successfully',
-                'data' => $complaint->load(['user', 'order', 'assignedTo']),
-            ], 201);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Complaint created successfully',
+                    'data' => $complaint->load(['user', 'order', 'assignedTo']),
+                ], 201);
+            }
+
+            return redirect()
+                ->route('complaints.show', $complaint)
+                ->with('success', 'Complaint created successfully');
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to create complaint',
-                'error' => $e->getMessage(),
-            ], 500);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to create complaint',
+                    'error' => $e->getMessage(),
+                ], 500);
+            }
+            return redirect()->back()->with('error', 'Failed to create complaint. Please try again.');
+        }
+    }
+
+    /**
+     * Show complaint edit form
+     */
+    public function edit(Request $request, Complaint $complaint)
+    {
+        try {
+            $user = $request->user();
+            
+            // Check if user has access to edit this complaint
+            if (!$user->isAdmin() && $complaint->user_id !== $user->id) {
+                return redirect()->back()->with('error', 'Access denied to edit this complaint.');
+            }
+
+            $complaint->load(['user', 'order']);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'data' => $complaint,
+                ]);
+            }
+
+            // For web requests, return edit view with complaint data
+            return view('complaints.edit', compact('complaint'));
+
+        } catch (\Exception $e) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to load complaint for editing',
+                    'error' => $e->getMessage(),
+                ], 500);
+            }
+            
+            return redirect()->back()->with('error', 'Failed to load complaint for editing. Please try again.');
+        }
+    }
+
+    /**
+     * Update complaint
+     */
+    public function update(Request $request, Complaint $complaint)
+    {
+        try {
+            $user = $request->user();
+            
+            // Check if user has access to update this complaint
+            if (!$user->isAdmin() && $complaint->user_id !== $user->id) {
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Access denied to update this complaint',
+                    ], 403);
+                }
+                
+                return redirect()->back()->with('error', 'Access denied to update this complaint.');
+            }
+
+            // Validation rules
+            $rules = [
+                'title' => 'required|string|max:255',
+                'description' => 'required|string',
+                'type' => 'required|in:delivery,service,payment,other',
+                'priority' => 'sometimes|in:low,medium,high,urgent',
+                'order_id' => 'sometimes|nullable|exists:orders,id',
+            ];
+
+            // Admin-only fields
+            if ($user->isAdmin()) {
+                $rules['status'] = 'sometimes|in:open,in_progress,resolved,closed';
+                $rules['assigned_to'] = 'sometimes|nullable|exists:users,id';
+                $rules['resolution'] = 'sometimes|nullable|string';
+            }
+
+            $validator = Validator::make($request->all(), $rules);
+
+            if ($validator->fails()) {
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Validation failed',
+                        'errors' => $validator->errors(),
+                    ], 422);
+                }
+                
+                return redirect()->back()->withErrors($validator)->withInput();
+            }
+
+            // Update complaint
+            $updateData = $request->only(['title', 'description', 'type', 'priority', 'order_id']);
+            
+            if ($user->isAdmin()) {
+                $adminFields = $request->only(['status', 'assigned_to', 'resolution']);
+                
+                // Set timestamps for admin actions
+                if (isset($adminFields['status'])) {
+                    if ($adminFields['status'] === 'resolved' && $complaint->status !== 'resolved') {
+                        $adminFields['resolved_at'] = now();
+                    }
+                }
+                
+                $updateData = array_merge($updateData, $adminFields);
+            }
+
+            $complaint->update($updateData);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Complaint updated successfully',
+                    'data' => $complaint->load(['user', 'order', 'assignedTo']),
+                ]);
+            }
+
+            // For web requests, redirect with success message
+            return redirect()->route('complaints.show', $complaint)->with('success', 'Keluhan berhasil diperbarui.');
+
+        } catch (\Exception $e) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to update complaint',
+                    'error' => $e->getMessage(),
+                ], 500);
+            }
+            
+            return redirect()->back()->with('error', 'Failed to update complaint. Please try again.')->withInput();
         }
     }
 
