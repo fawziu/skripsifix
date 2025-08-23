@@ -10,6 +10,7 @@ use App\Services\LocalGeographicalService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
@@ -76,6 +77,13 @@ class OrderController extends Controller
             'courier_service' => 'sometimes|string',
         ]);
 
+        // Additional validation for RajaOngkir shipping method
+        if ($request->shipping_method === 'rajaongkir') {
+            if (!$request->origin_province || !$request->origin_city) {
+                $validator->errors()->add('shipping_method', 'Provinsi dan kota asal diperlukan untuk pengiriman via RajaOngkir.');
+            }
+        }
+
         if ($validator->fails()) {
             if ($request->expectsJson()) {
                 return response()->json([
@@ -104,10 +112,10 @@ class OrderController extends Controller
                 return redirect()->back()->with('error', 'Hanya customer yang dapat membuat pesanan.');
             }
 
-            // Get destination address
+            // Get destination address with relationships loaded
             $destinationAddress = null;
             if ($request->destination_address_id) {
-                $destinationAddress = $user->addresses()->findOrFail($request->destination_address_id);
+                $destinationAddress = $user->addresses()->with(['province', 'city', 'district'])->findOrFail($request->destination_address_id);
             }
 
             // Prepare order data
@@ -120,10 +128,13 @@ class OrderController extends Controller
                 'destination_address' => $destinationAddress ? $destinationAddress->full_address : $request->destination_address,
                 'origin_province' => $request->origin_province,
                 'origin_city' => $request->origin_city,
-                'destination_province' => $destinationAddress ? $destinationAddress->province->rajaongkir_id : null,
-                'destination_city' => $destinationAddress ? $destinationAddress->city->rajaongkir_id : null,
+                'destination_province' => $destinationAddress && $destinationAddress->province ? $destinationAddress->province->rajaongkir_id : null,
+                'destination_city' => $destinationAddress && $destinationAddress->city ? $destinationAddress->city->rajaongkir_id : null,
                 'courier_service' => $request->courier_service,
             ];
+
+            // Log the order data for debugging (remove in production)
+            Log::info('Order data being sent to service:', $orderData);
 
             $order = $this->orderService->createOrder($orderData, $user);
 
@@ -139,6 +150,13 @@ class OrderController extends Controller
                 ->with('success', 'Pesanan berhasil dibuat!');
 
         } catch (\Exception $e) {
+            // Log the error for debugging
+            Log::error('Order creation failed: ' . $e->getMessage(), [
+                'user_id' => $user->id ?? 'unknown',
+                'request_data' => $request->all(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,

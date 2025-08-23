@@ -207,3 +207,4 @@ document.getElementById('password_confirmation').addEventListener('input', funct
 </script>
 @endpush
 @endsection
+

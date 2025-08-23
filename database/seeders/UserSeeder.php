@@ -21,10 +21,10 @@ class UserSeeder extends Seeder
 
         // Create Admin
         User::updateOrCreate(
-            ['email' => 'admin@logisys.com'],
+            ['email' => 'admin@Afiyah.com'],
             [
                 'name' => 'System Administrator',
-                'email' => 'admin@logisys.com',
+                'email' => 'admin@Afiyah.com',
                 'password' => Hash::make('password'),
                 'phone' => '081234567890',
                 'address' => 'Jl. Admin No. 1, Jakarta',
@@ -38,31 +38,31 @@ class UserSeeder extends Seeder
         $couriers = [
             [
                 'name' => 'Ahmad Supriadi',
-                'email' => 'ahmad@logisys.com',
+                'email' => 'ahmad@Afiyah.com',
                 'phone' => '081234567891',
                 'address' => 'Jl. Kurir No. 1, Makassar',
             ],
             [
                 'name' => 'Budi Santoso',
-                'email' => 'budi@logisys.com',
+                'email' => 'budi@Afiyah.com',
                 'phone' => '081234567892',
                 'address' => 'Jl. Kurir No. 2, Makassar',
             ],
             [
                 'name' => 'Citra Dewi',
-                'email' => 'citra@logisys.com',
+                'email' => 'citra@Afiyah.com',
                 'phone' => '081234567893',
                 'address' => 'Jl. Kurir No. 3, Makassar',
             ],
             [
                 'name' => 'Dedi Kurniawan',
-                'email' => 'dedi@logisys.com',
+                'email' => 'dedi@Afiyah.com',
                 'phone' => '081234567894',
                 'address' => 'Jl. Kurir No. 4, Makassar',
             ],
             [
                 'name' => 'Eka Putri',
-                'email' => 'eka@logisys.com',
+                'email' => 'eka@Afiyah.com',
                 'phone' => '081234567895',
                 'address' => 'Jl. Kurir No. 5, Makassar',
             ],

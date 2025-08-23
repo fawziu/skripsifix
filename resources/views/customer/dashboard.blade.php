@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Customer Dashboard - LogiSys')
+@section('title', 'Customer Dashboard - Afiyah')
 
 @section('content')
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

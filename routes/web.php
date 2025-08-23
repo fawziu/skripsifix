@@ -132,9 +132,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
     
     // All users can view complaint details
-    Route::get('/complaints/{complaint}', function ($complaint) {
-        return view('complaints.show', compact('complaint'));
-    })->name('complaints.show');
+    Route::get('/complaints/{complaint}', [ComplaintController::class, 'show'])->name('complaints.show');
     
     // Address routes (customer only)
     Route::middleware('customer')->group(function () {

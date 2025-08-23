@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Alamat Saya - LogiSys')
+@section('title', 'Alamat Saya - Afiyah')
 
 @section('content')
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -68,7 +68,7 @@
             <div class="mb-4">
                 <p class="text-sm text-gray-700 leading-relaxed">{{ $address->address_line }}</p>
                 <p class="text-sm text-gray-600 mt-1">
-                    {{ $address->district?->name }}, {{ $address->city->name }}, {{ $address->province->name }}
+                    {{ $address->district?->name ?? '-' }}, {{ $address->city?->name ?? '-' }}, {{ $address->province?->name ?? '-' }}
                     @if($address->postal_code)
                         {{ $address->postal_code }}
                     @endif

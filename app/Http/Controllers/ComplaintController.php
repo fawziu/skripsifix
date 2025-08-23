@@ -106,31 +106,45 @@ class ComplaintController extends Controller
     /**
      * Get complaint details
      */
-    public function show(Request $request, Complaint $complaint): JsonResponse
+    public function show(Request $request, Complaint $complaint)
     {
         try {
             $user = $request->user();
             
             // Check if user has access to this complaint
             if (!$user->isAdmin() && $complaint->user_id !== $user->id && $complaint->assigned_to !== $user->id) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Access denied',
-                ], 403);
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Access denied',
+                    ], 403);
+                }
+                
+                return redirect()->back()->with('error', 'Access denied to this complaint.');
             }
 
             $complaint->load(['user', 'order', 'assignedTo']);
 
-            return response()->json([
-                'success' => true,
-                'data' => $complaint,
-            ]);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'data' => $complaint,
+                ]);
+            }
+
+            // For web requests, return view with complaint data
+            return view('complaints.show', compact('complaint'));
+
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to get complaint details',
-                'error' => $e->getMessage(),
-            ], 500);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to get complaint details',
+                    'error' => $e->getMessage(),
+                ], 500);
+            }
+            
+            return redirect()->back()->with('error', 'Failed to load complaint details. Please try again.');
         }
     }
 

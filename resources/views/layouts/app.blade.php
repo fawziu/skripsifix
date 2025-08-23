@@ -11,7 +11,7 @@
     <meta name="theme-color" content="#2563eb">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="LogiSys">
+    <meta name="apple-mobile-web-app-title" content="Afiyah">
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -37,7 +37,7 @@
                 <div class="flex items-center">
                     <a href="{{ route('dashboard') }}" class="flex items-center space-x-2">
                         <i class="fas fa-truck text-blue-600 text-xl"></i>
-                        <span class="font-bold text-xl text-gray-900">LogiSys</span>
+                        <span class="font-bold text-xl text-gray-900">Afiyah</span>
                     </a>
                 </div>
 

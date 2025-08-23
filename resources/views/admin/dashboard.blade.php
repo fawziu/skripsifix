@@ -1,13 +1,13 @@
 @extends('layouts.app')
 
-@section('title', 'Admin Dashboard - LogiSys')
+@section('title', 'Admin Dashboard - Afiyah')
 
 @section('content')
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <!-- Header -->
     <div class="mb-8">
         <h1 class="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-        <p class="mt-2 text-gray-600">Selamat datang, {{ Auth::user()->name }}! Kelola sistem LogiSys Anda.</p>
+        <p class="mt-2 text-gray-600">Selamat datang, {{ Auth::user()->name }}! Kelola sistem Afiyah Anda.</p>
     </div>
 
     <!-- Statistics Cards -->

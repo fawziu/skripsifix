@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Buat Pesanan - LogiSys')
+@section('title', 'Buat Pesanan - Afiyah')
 
 @section('content')
 <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -148,11 +148,11 @@
                                 <select id="destination_address_id" name="destination_address_id" @change="selectAddress()"
                                         class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                     <option value="">Pilih alamat tujuan</option>
-                                    @foreach(Auth::user()->addresses()->active()->get() as $address)
+                                    @foreach(Auth::user()->addresses()->with(['province', 'city'])->active()->get() as $address)
                                         <option value="{{ $address->id }}" 
                                                 data-address="{{ $address->full_address }}"
-                                                data-province="{{ $address->province->rajaongkir_id }}"
-                                                data-city="{{ $address->city->rajaongkir_id }}">
+                                                data-province="{{ $address->province ? $address->province->rajaongkir_id : '' }}"
+                                                data-city="{{ $address->city ? $address->city->rajaongkir_id : '' }}">
                                             {{ $address->label }} - {{ $address->full_address }}
                                         </option>
                                     @endforeach
