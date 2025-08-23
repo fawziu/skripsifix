@@ -154,7 +154,7 @@
                             Rp {{ number_format($order->total_cost, 0, ',', '.') }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {{ $order->created_at->format('d M Y H:i') }}
+                            {{ $order->created_at->format('d M Y H:i') }} WITA
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div class="flex items-center space-x-2">

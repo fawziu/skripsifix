@@ -33,7 +33,7 @@ class OrderController extends Controller
         try {
             $user = $request->user();
             $filters = $request->only(['status', 'shipping_method', 'date_from', 'date_to', 'sort']);
-            
+
             $orders = $this->orderService->getOrdersByUser($user, $filters);
 
             if ($request->expectsJson()) {
@@ -54,7 +54,7 @@ class OrderController extends Controller
                     'error' => $e->getMessage(),
                 ], 500);
             }
-            
+
             return redirect()->back()->with('error', 'Failed to load orders. Please try again.');
         }
     }
@@ -64,6 +64,12 @@ class OrderController extends Controller
      */
     public function store(Request $request)
     {
+        // Debug: Log the incoming request data
+        Log::info('Order creation request received', [
+            'all_data' => $request->all(),
+            'user_id' => $request->user() ? $request->user()->id : null,
+        ]);
+
         $validator = Validator::make($request->all(), [
             'item_description' => 'required|string',
             'item_weight' => 'required|numeric|min:0.1',
@@ -71,10 +77,13 @@ class OrderController extends Controller
             'shipping_method' => 'required|in:manual,rajaongkir',
             'origin_address' => 'required|string',
             'destination_address_id' => 'nullable|exists:addresses,id',
-            'destination_address' => 'required_without:destination_address_id|string',
+            'destination_address' => 'nullable|string',
             'origin_province' => 'required_if:shipping_method,rajaongkir|integer',
             'origin_city' => 'required_if:shipping_method,rajaongkir|integer',
             'courier_service' => 'sometimes|string',
+            'shipping_cost' => 'required|numeric|min:0',
+            'service_fee' => 'required|numeric|min:0',
+            'total_cost' => 'required|numeric|min:0',
         ]);
 
         // Additional validation for RajaOngkir shipping method
@@ -85,6 +94,11 @@ class OrderController extends Controller
         }
 
         if ($validator->fails()) {
+            Log::error('Order validation failed', [
+                'errors' => $validator->errors()->toArray(),
+                'input_data' => $request->all(),
+            ]);
+
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,
@@ -92,7 +106,7 @@ class OrderController extends Controller
                     'errors' => $validator->errors(),
                 ], 422);
             }
-            
+
             return redirect()->back()
                 ->withErrors($validator)
                 ->withInput();
@@ -100,7 +114,7 @@ class OrderController extends Controller
 
         try {
             $user = $request->user();
-            
+
             if (!$user->isCustomer()) {
                 if ($request->expectsJson()) {
                     return response()->json([
@@ -108,7 +122,7 @@ class OrderController extends Controller
                         'message' => 'Only customers can create orders',
                     ], 403);
                 }
-                
+
                 return redirect()->back()->with('error', 'Hanya customer yang dapat membuat pesanan.');
             }
 
@@ -131,12 +145,20 @@ class OrderController extends Controller
                 'destination_province' => $destinationAddress && $destinationAddress->province ? $destinationAddress->province->rajaongkir_id : null,
                 'destination_city' => $destinationAddress && $destinationAddress->city ? $destinationAddress->city->rajaongkir_id : null,
                 'courier_service' => $request->courier_service,
+                'shipping_cost' => $request->shipping_cost,
+                'service_fee' => $request->service_fee,
+                'total_cost' => $request->total_cost,
             ];
 
             // Log the order data for debugging (remove in production)
             Log::info('Order data being sent to service:', $orderData);
 
             $order = $this->orderService->createOrder($orderData, $user);
+
+            Log::info('Order created successfully', [
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+            ]);
 
             if ($request->expectsJson()) {
                 return response()->json([
@@ -148,15 +170,12 @@ class OrderController extends Controller
 
             return redirect()->route('orders.index')
                 ->with('success', 'Pesanan berhasil dibuat!');
-
         } catch (\Exception $e) {
-            // Log the error for debugging
-            Log::error('Order creation failed: ' . $e->getMessage(), [
-                'user_id' => $user->id ?? 'unknown',
-                'request_data' => $request->all(),
+            Log::error('Error creating order', [
+                'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,
@@ -164,7 +183,7 @@ class OrderController extends Controller
                     'error' => $e->getMessage(),
                 ], 500);
             }
-            
+
             return redirect()->back()
                 ->with('error', 'Gagal membuat pesanan. Silakan coba lagi.')
                 ->withInput();
@@ -178,7 +197,7 @@ class OrderController extends Controller
     {
         try {
             $user = $request->user();
-            
+
             // Check if user has access to this order
             if (!$user->isAdmin() && $order->customer_id !== $user->id && $order->courier_id !== $user->id) {
                 return response()->json([
@@ -279,13 +298,24 @@ class OrderController extends Controller
      */
     public function calculateShipping(Request $request): JsonResponse
     {
+        // Debug: Check authentication
+        Log::info('Calculate shipping request', [
+            'user' => $request->user() ? $request->user()->id : 'not_authenticated',
+            'request_data' => $request->all(),
+        ]);
+
         $validator = Validator::make($request->all(), [
             'origin' => 'required|integer',
             'destination' => 'required|integer',
             'weight' => 'required|numeric|min:0.1',
+            'courier' => 'required|string',
         ]);
 
         if ($validator->fails()) {
+            Log::error('Calculate shipping validation failed', [
+                'errors' => $validator->errors()->toArray(),
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
@@ -294,17 +324,42 @@ class OrderController extends Controller
         }
 
         try {
-            $result = $this->rajaOngkirService->calculateCost(
-                $request->origin,
-                $request->destination,
-                $request->weight
-            );
+            // Prepare data for RajaOngkir API
+            $costData = [
+                'origin' => $request->origin,
+                'destination' => $request->destination,
+                'weight' => $request->weight * 1000, // Convert to grams
+                'courier' => $request->courier,
+            ];
+
+            Log::info('Calling RajaOngkir API', $costData);
+
+            $result = $this->rajaOngkirService->calculateShippingCost($costData);
+
+            Log::info('RajaOngkir API result', [
+                'result_count' => count($result),
+                'result' => $result,
+            ]);
+
+            if (empty($result)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unable to calculate shipping cost from RajaOngkir',
+                    'data' => []
+                ]);
+            }
 
             return response()->json([
                 'success' => true,
                 'data' => $result
             ]);
         } catch (\Exception $e) {
+            Log::error('Error calculating shipping cost', [
+                'error' => $e->getMessage(),
+                'request_data' => $request->all(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to calculate shipping cost',
@@ -334,7 +389,7 @@ class OrderController extends Controller
 
         try {
             $user = $request->user();
-            
+
             if (!$user->isAdmin()) {
                 return response()->json([
                     'success' => false,
@@ -384,7 +439,7 @@ class OrderController extends Controller
 
         try {
             $user = $request->user();
-            
+
             if (!$user->isAdmin()) {
                 return response()->json([
                     'success' => false,
@@ -393,7 +448,7 @@ class OrderController extends Controller
             }
 
             $courier = User::find($request->courier_id);
-            
+
             if (!$courier->isCourier()) {
                 return response()->json([
                     'success' => false,
@@ -444,7 +499,7 @@ class OrderController extends Controller
 
         try {
             $user = $request->user();
-            
+
             // Check if user has permission to update this order
             if (!$user->isAdmin() && $order->courier_id !== $user->id) {
                 return response()->json([
@@ -454,9 +509,9 @@ class OrderController extends Controller
             }
 
             $success = $this->orderService->updateOrderStatus(
-                $order, 
-                $request->status, 
-                $user, 
+                $order,
+                $request->status,
+                $user,
                 $request->notes
             );
 
@@ -488,7 +543,7 @@ class OrderController extends Controller
     {
         try {
             $user = $request->user();
-            
+
             // Check if user has access to this order
             if (!$user->isAdmin() && $order->customer_id !== $user->id && $order->courier_id !== $user->id) {
                 return response()->json([
@@ -579,6 +634,34 @@ class OrderController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to get couriers',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Generate shipping label for order
+     */
+    public function generateLabel(Request $request, Order $order): JsonResponse
+    {
+        try {
+            $user = $request->user();
+
+            // Check if user has access to this order
+            if (!$user->isAdmin() && $order->customer_id !== $user->id && $order->courier_id !== $user->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Access denied',
+                ], 403);
+            }
+
+            $result = $this->orderService->getShippingLabel($order);
+
+            return response()->json($result);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to generate label',
                 'error' => $e->getMessage(),
             ], 500);
         }

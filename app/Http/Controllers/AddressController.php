@@ -36,7 +36,7 @@ class AddressController extends Controller
      */
     public function create()
     {
-        $provinces = $this->localGeographicalService->getProvinces();
+        $provinces = Province::active()->get();
         return view('addresses.create', compact('provinces'));
     }
 
@@ -95,9 +95,9 @@ class AddressController extends Controller
                 ->with('error', 'Akses ditolak.');
         }
 
-        $provinces = $this->localGeographicalService->getProvinces();
-        $cities = $this->localGeographicalService->getCities($address->province_id);
-        $districts = $this->localGeographicalService->getDistricts($address->city_id);
+        $provinces = Province::active()->get();
+        $cities = City::where('province_id', $address->province_id)->active()->get();
+        $districts = District::where('city_id', $address->city_id)->active()->get();
 
         return view('addresses.edit', compact('address', 'provinces', 'cities', 'districts'));
     }
@@ -213,7 +213,8 @@ class AddressController extends Controller
      */
     public function getCities(Request $request)
     {
-        $cities = $this->localGeographicalService->getCities($request->province_id);
+        $provinceId = $request->get('province_id');
+        $cities = City::where('province_id', $provinceId)->active()->get();
 
         return response()->json($cities);
     }
@@ -223,7 +224,8 @@ class AddressController extends Controller
      */
     public function getDistricts(Request $request)
     {
-        $districts = $this->localGeographicalService->getDistricts($request->city_id);
+        $cityId = $request->get('city_id');
+        $districts = District::where('city_id', $cityId)->active()->get();
 
         return response()->json($districts);
     }
@@ -233,7 +235,7 @@ class AddressController extends Controller
      */
     public function getProvinces()
     {
-        $provinces = $this->localGeographicalService->getProvinces();
+        $provinces = Province::active()->get();
 
         return response()->json([
             'success' => true,

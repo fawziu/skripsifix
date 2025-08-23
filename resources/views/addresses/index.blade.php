@@ -12,7 +12,7 @@
                 <p class="mt-2 text-gray-600">Kelola alamat pengiriman Anda</p>
             </div>
             <div class="mt-4 sm:mt-0">
-                <a href="{{ route('addresses.create') }}" 
+                <a href="{{ route('addresses.create') }}"
                    class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
                     <i class="fas fa-plus mr-2"></i>
                     Tambah Alamat Baru
@@ -68,9 +68,21 @@
             <div class="mb-4">
                 <p class="text-sm text-gray-700 leading-relaxed">{{ $address->address_line }}</p>
                 <p class="text-sm text-gray-600 mt-1">
-                    {{ $address->district?->name ?? '-' }}, {{ $address->city?->name ?? '-' }}, {{ $address->province?->name ?? '-' }}
+                    @if($address->district)
+                        <span class="font-medium">{{ $address->district->name }}</span>,
+                    @endif
+                    @if($address->city)
+                        <span class="font-medium">{{ $address->city->name }}</span>
+                        @if($address->city->type)
+                            <span class="text-xs text-gray-500">({{ $address->city->type }})</span>
+                        @endif
+                        ,
+                    @endif
+                    @if($address->province)
+                        <span class="font-medium">{{ $address->province->name }}</span>
+                    @endif
                     @if($address->postal_code)
-                        {{ $address->postal_code }}
+                        <br><span class="text-xs text-gray-500">{{ $address->postal_code }}</span>
                     @endif
                 </p>
             </div>
@@ -89,7 +101,7 @@
                     @endif
                 </div>
                 <div class="flex items-center space-x-2">
-                    <a href="{{ route('addresses.edit', $address) }}" 
+                    <a href="{{ route('addresses.edit', $address) }}"
                        class="text-gray-600 hover:text-gray-800 transition-colors">
                         <i class="fas fa-edit"></i>
                     </a>
@@ -112,7 +124,7 @@
                 </div>
                 <h3 class="text-lg font-medium text-gray-900 mb-2">Belum ada alamat</h3>
                 <p class="text-gray-500 mb-6">Tambahkan alamat pengiriman untuk memudahkan proses pemesanan</p>
-                <a href="{{ route('addresses.create') }}" 
+                <a href="{{ route('addresses.create') }}"
                    class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
                     <i class="fas fa-plus mr-2"></i>
                     Tambah Alamat Pertama

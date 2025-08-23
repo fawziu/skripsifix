@@ -24,7 +24,7 @@ class RajaOngkirService
     public function searchDestinations(string $search, int $limit = 10, int $offset = 0): array
     {
         $cacheKey = "rajaongkir_destinations_{$search}_{$limit}_{$offset}";
-        
+
         return Cache::remember($cacheKey, 86400, function () use ($search, $limit, $offset) {
             try {
                 $response = Http::withHeaders([
@@ -63,7 +63,7 @@ class RajaOngkirService
     public function getProvinces(): array
     {
         $cacheKey = 'rajaongkir_provinces_filtered';
-        
+
         return Cache::remember($cacheKey, 86400, function () {
             try {
                 $response = Http::withHeaders([
@@ -73,13 +73,13 @@ class RajaOngkirService
                 if ($response->successful()) {
                     $data = $response->json();
                     $allProvinces = $data['data'] ?? [];
-                    
+
                     // Filter only Sulawesi Selatan and Papua Barat
                     $filteredProvinces = array_filter($allProvinces, function ($province) {
                         $allowedProvinces = ['Sulawesi Selatan', 'Papua Barat'];
                         return in_array($province['province_name'], $allowedProvinces);
                     });
-                    
+
                     return array_values($filteredProvinces);
                 }
 
@@ -104,7 +104,7 @@ class RajaOngkirService
     public function getCities(int $provinceId = null): array
     {
         $cacheKey = "rajaongkir_cities_{$provinceId}";
-        
+
         return Cache::remember($cacheKey, 86400, function () use ($provinceId) {
             try {
                 $url = "{$this->baseUrl}/destination/city";
@@ -144,7 +144,7 @@ class RajaOngkirService
     public function getDistricts(int $cityId): array
     {
         $cacheKey = "rajaongkir_districts_{$cityId}";
-        
+
         return Cache::remember($cacheKey, 86400, function () use ($cityId) {
             try {
                 $response = Http::withHeaders([
@@ -179,19 +179,54 @@ class RajaOngkirService
     public function calculateShippingCost(array $data): array
     {
         try {
-            $response = Http::withHeaders([
-                'key' => $this->apiKey,
-                'content-type' => 'application/json',
-            ])->post("{$this->baseUrl}/calculate/domestic-cost", [
+            Log::info('RajaOngkir API call - Calculate Cost', [
+                'request_data' => $data,
+                'api_key' => $this->apiKey ? 'set' : 'not_set',
+                'base_url' => $this->baseUrl,
+            ]);
+
+            // Prepare request data in correct format
+            $requestData = [
                 'origin' => $data['origin'],
+                'originType' => 'city',
                 'destination' => $data['destination'],
+                'destinationType' => 'city',
                 'weight' => $data['weight'],
                 'courier' => $data['courier'],
+            ];
+
+            $response = Http::withHeaders([
+                'key' => $this->apiKey,
+                'Content-Type' => 'application/x-www-form-urlencoded',
+            ])->asForm()->post("{$this->baseUrl}/calculate/domestic-cost", $requestData);
+
+            Log::info('RajaOngkir API response', [
+                'status' => $response->status(),
+                'body' => $response->body(),
             ]);
 
             if ($response->successful()) {
-                $data = $response->json();
-                return $data['data'] ?? [];
+                $responseData = $response->json();
+                Log::info('RajaOngkir API success', [
+                    'data' => $responseData,
+                ]);
+
+                // Extract the cost data from RajaOngkir response
+                if (isset($responseData['data']) && is_array($responseData['data'])) {
+                    $results = [];
+                    foreach ($responseData['data'] as $service) {
+                        $results[] = [
+                            'service' => $service['code'],
+                            'description' => $service['description'],
+                            'cost' => $service['cost'],
+                            'etd' => $service['etd'],
+                            'note' => $service['name'] ?? '',
+                        ];
+                    }
+                    return $results;
+                }
+
+                return [];
             }
 
             Log::error('RajaOngkir API Error - Calculate Cost', [
@@ -307,14 +342,14 @@ class RajaOngkirService
     public function getCachedDestinationsForProvinces(): array
     {
         $sulawesiSelatanCities = [
-            'Makassar', 'Gowa', 'Maros', 'Pangkajene dan Kepulauan', 'Barru', 'Bone', 'Soppeng', 
-            'Wajo', 'Sidenreng Rappang', 'Parepare', 'Pinrang', 'Enrekang', 'Tana Toraja', 
-            'Luwu', 'Luwu Utara', 'Luwu Timur', 'Toraja Utara', 'Bantaeng', 'Bulukumba', 
+            'Makassar', 'Gowa', 'Maros', 'Pangkajene dan Kepulauan', 'Barru', 'Bone', 'Soppeng',
+            'Wajo', 'Sidenreng Rappang', 'Parepare', 'Pinrang', 'Enrekang', 'Tana Toraja',
+            'Luwu', 'Luwu Utara', 'Luwu Timur', 'Toraja Utara', 'Bantaeng', 'Bulukumba',
             'Sinjai', 'Selayar', 'Takalar', 'Jeneponto'
         ];
 
         $papuaBaratCities = [
-            'Manokwari', 'Sorong', 'Fakfak', 'Sorong Selatan', 'Raja Ampat', 'Teluk Bintuni', 
+            'Manokwari', 'Sorong', 'Fakfak', 'Sorong Selatan', 'Raja Ampat', 'Teluk Bintuni',
             'Teluk Wondama', 'Kaimana', 'Tambrauw', 'Maybrat', 'Manokwari Selatan', 'Pegunungan Arfak'
         ];
 
@@ -337,5 +372,108 @@ class RajaOngkirService
         }
 
         return $cachedDestinations;
+    }
+
+    /**
+     * Create shipping order and generate tracking number
+     * Note: This would require integration with RajaOngkir's order creation API
+     * Currently this is a placeholder for future implementation
+     */
+    public function createShippingOrder(array $orderData): array
+    {
+        try {
+            // This would integrate with RajaOngkir's order creation API
+            // For now, we'll generate a mock tracking number
+            $trackingNumber = $this->generateMockTrackingNumber($orderData['courier']);
+
+            return [
+                'success' => true,
+                'tracking_number' => $trackingNumber,
+                'message' => 'Order created successfully',
+                'estimated_delivery' => now()->addDays(3)->format('Y-m-d H:i:s'),
+            ];
+        } catch (Exception $e) {
+            Log::error('RajaOngkir API Exception - Create Order', [
+                'message' => $e->getMessage(),
+                'order_data' => $orderData,
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to create shipping order',
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Generate mock tracking number for testing purposes
+     */
+    private function generateMockTrackingNumber(string $courier): string
+    {
+        $prefixes = [
+            'jne' => 'JNE',
+            'pos' => 'POS',
+            'tiki' => 'TIKI',
+            'sicepat' => 'SICEPAT',
+            'jnt' => 'JNT',
+            'wahana' => 'WAHANA',
+            'ninja' => 'NINJA',
+            'lion' => 'LION',
+            'pcp' => 'PCP',
+            'jet' => 'JET',
+            'rex' => 'REX',
+            'first' => 'FIRST',
+            'ide' => 'IDE',
+            'spx' => 'SPX',
+            'kgx' => 'KGX',
+            'sap' => 'SAP',
+            'jxe' => 'JXE',
+            'rpx' => 'RPX',
+            'pandu' => 'PANDU',
+            'pahala' => 'PAHALA',
+            'cahaya' => 'CAHAYA',
+            'sat' => 'SAT',
+            'nusantara' => 'NUSANTARA',
+            'star' => 'STAR',
+            'idl' => 'IDL',
+            'indah' => 'INDAH',
+            'dse' => 'DSE',
+        ];
+
+        $prefix = $prefixes[strtolower($courier)] ?? 'TRK';
+        $randomNumber = str_pad(rand(1, 999999999), 9, '0', STR_PAD_LEFT);
+
+        return $prefix . $randomNumber;
+    }
+
+    /**
+     * Get shipping label/waybill
+     * Note: This would require integration with RajaOngkir's label generation API
+     */
+    public function getShippingLabel(string $trackingNumber, string $courier): array
+    {
+        try {
+            // This would integrate with RajaOngkir's label generation API
+            // For now, return a mock response
+            return [
+                'success' => true,
+                'label_url' => null, // Would be actual label URL from RajaOngkir
+                'message' => 'Label generated successfully',
+                'tracking_number' => $trackingNumber,
+            ];
+        } catch (Exception $e) {
+            Log::error('RajaOngkir API Exception - Get Label', [
+                'message' => $e->getMessage(),
+                'tracking_number' => $trackingNumber,
+                'courier' => $courier,
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to generate shipping label',
+                'error' => $e->getMessage(),
+            ];
+        }
     }
 }

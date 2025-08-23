@@ -27,6 +27,9 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 
+// Shipping calculation (accessible from web forms)
+Route::post('/calculate-shipping', [OrderController::class, 'calculateShipping']);
+
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
     // Orders
@@ -35,14 +38,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/orders/{order}', [OrderController::class, 'show']);
     Route::put('/orders/{order}', [OrderController::class, 'update']);
     Route::delete('/orders/{order}', [OrderController::class, 'destroy']);
-    
+
     // Complaints
     Route::get('/complaints', [ComplaintController::class, 'index']);
     Route::post('/complaints', [ComplaintController::class, 'store']);
     Route::get('/complaints/{complaint}', [ComplaintController::class, 'show']);
     Route::put('/complaints/{complaint}', [ComplaintController::class, 'update']);
     Route::delete('/complaints/{complaint}', [ComplaintController::class, 'destroy']);
-    
+
     // Addresses
     Route::get('/addresses', [AddressController::class, 'index']);
     Route::post('/addresses', [AddressController::class, 'store']);
@@ -50,12 +53,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/addresses/{address}', [AddressController::class, 'update']);
     Route::delete('/addresses/{address}', [AddressController::class, 'destroy']);
     Route::post('/addresses/{address}/set-primary', [AddressController::class, 'setPrimary']);
-    
+
     // Location data for RajaOngkir
     Route::get('/provinces', [AddressController::class, 'getProvinces']);
     Route::get('/cities', [AddressController::class, 'getCitiesApi']);
     Route::get('/districts', [AddressController::class, 'getDistrictsApi']);
-    
-    // Shipping calculation
-    Route::post('/calculate-shipping', [OrderController::class, 'calculateShipping']);
+
+    // Order tracking and labels
+    Route::post('/orders/{order}/track', [OrderController::class, 'trackOrder']);
+    Route::post('/orders/{order}/generate-label', [OrderController::class, 'generateLabel']);
 });

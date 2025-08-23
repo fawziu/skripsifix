@@ -34,7 +34,7 @@ class OrderService
                 'item_price' => $data['item_price'],
                 'service_fee' => $data['service_fee'] ?? 0,
                 'shipping_cost' => $data['shipping_cost'] ?? 0,
-                'total_amount' => $this->calculateTotalAmount($data),
+                'total_amount' => $data['total_cost'] ?? $this->calculateTotalAmount($data),
                 'shipping_method' => $data['shipping_method'],
                 'origin_address' => $data['origin_address'],
                 'destination_address' => $data['destination_address'],
@@ -182,6 +182,11 @@ class OrderService
             // Create status update
             $this->createOrderStatus($order, $status, $user->id, $notes);
 
+            // If order is confirmed and uses RajaOngkir, generate tracking number
+            if ($status === 'confirmed' && $order->isRajaOngkirShipping() && !$order->tracking_number) {
+                $this->generateTrackingNumber($order);
+            }
+
             DB::commit();
             return true;
         } catch (Exception $e) {
@@ -192,6 +197,90 @@ class OrderService
                 'status' => $status,
             ]);
             return false;
+        }
+    }
+
+    /**
+     * Generate tracking number for RajaOngkir orders
+     */
+    public function generateTrackingNumber(Order $order): bool
+    {
+        try {
+            if (!$order->isRajaOngkirShipping()) {
+                return false;
+            }
+
+            // Prepare order data for RajaOngkir
+            $orderData = [
+                'courier' => $order->courier_service ?? 'jne',
+                'origin' => $order->origin_city,
+                'destination' => $order->destination_city,
+                'weight' => $order->item_weight,
+                'item_description' => $order->item_description,
+                'item_price' => $order->item_price,
+            ];
+
+            // Create shipping order in RajaOngkir
+            $result = $this->rajaOngkirService->createShippingOrder($orderData);
+
+            if ($result['success'] && isset($result['tracking_number'])) {
+                $order->tracking_number = $result['tracking_number'];
+                $order->estimated_delivery = $result['estimated_delivery'] ?? null;
+                $order->save();
+
+                Log::info('Tracking number generated successfully', [
+                    'order_id' => $order->id,
+                    'tracking_number' => $result['tracking_number'],
+                ]);
+
+                return true;
+            }
+
+            Log::error('Failed to generate tracking number', [
+                'order_id' => $order->id,
+                'result' => $result,
+            ]);
+
+            return false;
+        } catch (Exception $e) {
+            Log::error('Error generating tracking number', [
+                'error' => $e->getMessage(),
+                'order_id' => $order->id,
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Get shipping label for order
+     */
+    public function getShippingLabel(Order $order): array
+    {
+        if (!$order->isRajaOngkirShipping() || !$order->tracking_number) {
+            return [
+                'success' => false,
+                'message' => 'This order does not support label generation',
+            ];
+        }
+
+        try {
+            $result = $this->rajaOngkirService->getShippingLabel(
+                $order->tracking_number,
+                $order->courier_service
+            );
+
+            return $result;
+        } catch (Exception $e) {
+            Log::error('Error getting shipping label', [
+                'error' => $e->getMessage(),
+                'order_id' => $order->id,
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Error generating shipping label',
+                'error' => $e->getMessage(),
+            ];
         }
     }
 

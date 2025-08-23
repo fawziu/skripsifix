@@ -12,13 +12,13 @@
                 <p class="mt-2 text-gray-600">Informasi lengkap pesanan pengiriman</p>
             </div>
             <div class="flex items-center space-x-3">
-                <a href="{{ route('orders.index') }}" 
+                <a href="{{ route('orders.index') }}"
                    class="inline-flex items-center px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors">
                     <i class="fas fa-arrow-left mr-2"></i>
                     Kembali
                 </a>
                 @if(Auth::user()->isAdmin() && $order->status === 'pending')
-                <a href="{{ route('orders.edit', $order) }}" 
+                <a href="{{ route('orders.edit', $order) }}"
                    class="inline-flex items-center px-4 py-2 bg-yellow-600 text-white text-sm font-medium rounded-lg hover:bg-yellow-700 transition-colors">
                     <i class="fas fa-edit mr-2"></i>
                     Edit
@@ -35,7 +35,7 @@
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-lg font-semibold text-gray-900">Status Pesanan</h3>
-                    <span class="inline-flex px-3 py-1 text-sm font-semibold rounded-full 
+                    <span class="inline-flex px-3 py-1 text-sm font-semibold rounded-full
                         @if($order->status === 'pending') bg-yellow-100 text-yellow-800
                         @elseif($order->status === 'confirmed') bg-blue-100 text-blue-800
                         @elseif($order->status === 'assigned') bg-indigo-100 text-indigo-800
@@ -63,7 +63,7 @@
                     @foreach($statuses as $status => $info)
                         <div class="flex items-center">
                             <div class="flex-shrink-0">
-                                <div class="w-8 h-8 rounded-full flex items-center justify-center 
+                                <div class="w-8 h-8 rounded-full flex items-center justify-center
                                     @if(array_search($status, array_keys($statuses)) <= array_search($order->status, array_keys($statuses)))
                                         bg-blue-100 text-blue-600
                                     @else
@@ -99,11 +99,11 @@
                     </div>
                     <div>
                         <span class="text-sm font-medium text-gray-600">Berat:</span>
-                        <p class="text-sm text-gray-900 mt-1">{{ $order->item_weight }} kg</p>
+                        <p class="text-sm text-gray-900 mt-1">{{ $order->item_weight ?? 0 }} kg</p>
                     </div>
                     <div>
                         <span class="text-sm font-medium text-gray-600">Nilai Barang:</span>
-                        <p class="text-sm text-gray-900 mt-1">Rp {{ number_format($order->item_price, 0, ',', '.') }}</p>
+                        <p class="text-sm text-gray-900 mt-1">Rp {{ number_format($order->item_price ?? 0, 0, ',', '.') }}</p>
                     </div>
                     <div>
                         <span class="text-sm font-medium text-gray-600">Metode Pengiriman:</span>
@@ -176,24 +176,24 @@
                 <div class="space-y-3">
                     <div class="flex justify-between">
                         <span class="text-sm text-gray-600">Nilai Barang:</span>
-                        <span class="text-sm font-medium">Rp {{ number_format($order->item_price, 0, ',', '.') }}</span>
+                        <span class="text-sm font-medium">Rp {{ number_format($order->item_price ?? 0, 0, ',', '.') }}</span>
                     </div>
                     @if($order->service_fee)
                     <div class="flex justify-between">
                         <span class="text-sm text-gray-600">Biaya Layanan:</span>
-                        <span class="text-sm font-medium">Rp {{ number_format($order->service_fee, 0, ',', '.') }}</span>
+                        <span class="text-sm font-medium">Rp {{ number_format($order->service_fee ?? 0, 0, ',', '.') }}</span>
                     </div>
                     @endif
                     @if($order->shipping_cost)
                     <div class="flex justify-between">
                         <span class="text-sm text-gray-600">Biaya Pengiriman:</span>
-                        <span class="text-sm font-medium">Rp {{ number_format($order->shipping_cost, 0, ',', '.') }}</span>
+                        <span class="text-sm font-medium">Rp {{ number_format($order->shipping_cost ?? 0, 0, ',', '.') }}</span>
                     </div>
                     @endif
                     <div class="border-t pt-3">
                         <div class="flex justify-between">
                             <span class="text-base font-semibold text-gray-900">Total:</span>
-                            <span class="text-base font-semibold text-gray-900">Rp {{ number_format($order->total_cost, 0, ',', '.') }}</span>
+                            <span class="text-base font-semibold text-gray-900">Rp {{ number_format($order->total_amount ?? 0, 0, ',', '.') }}</span>
                         </div>
                     </div>
                 </div>
@@ -230,15 +230,23 @@
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Aksi</h3>
                 <div class="space-y-3">
                     @if(Auth::user()->isAdmin() || Auth::user()->id === $order->courier_id)
-                    <a href="{{ route('orders.track', $order) }}" 
+                    <a href="{{ route('orders.track', $order) }}"
                        class="w-full inline-flex items-center justify-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors">
                         <i class="fas fa-truck mr-2"></i>
                         Lacak Pesanan
                     </a>
                     @endif
-                    
+
+                    @if($order->tracking_number && $order->shipping_method === 'rajaongkir')
+                    <button type="button" onclick="generateLabel()"
+                            class="w-full inline-flex items-center justify-center px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-lg hover:bg-orange-700 transition-colors">
+                        <i class="fas fa-print mr-2"></i>
+                        Generate Label
+                    </button>
+                    @endif
+
                     @if(Auth::user()->isAdmin() && $order->status === 'pending')
-                    <button type="button" onclick="confirmOrder()" 
+                    <button type="button" onclick="confirmOrder()"
                             class="w-full inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
                         <i class="fas fa-check mr-2"></i>
                         Konfirmasi Pesanan
@@ -246,14 +254,14 @@
                     @endif
 
                     @if(Auth::user()->isAdmin() && $order->status === 'confirmed' && !$order->courier_id)
-                    <button type="button" onclick="assignCourier()" 
+                    <button type="button" onclick="assignCourier()"
                             class="w-full inline-flex items-center justify-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors">
                         <i class="fas fa-user-plus mr-2"></i>
                         Tugaskan Kurir
                     </button>
                     @endif
 
-                    <a href="{{ route('complaints.create', ['order_id' => $order->id]) }}" 
+                    <a href="{{ route('complaints.create', ['order_id' => $order->id]) }}"
                        class="w-full inline-flex items-center justify-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors">
                         <i class="fas fa-exclamation-triangle mr-2"></i>
                         Laporkan Masalah
@@ -277,6 +285,33 @@ function assignCourier() {
     if (confirm('Apakah Anda yakin ingin menugaskan kurir untuk pesanan ini?')) {
         // Add courier assignment logic here
         console.log('Assigning courier...');
+    }
+}
+
+function generateLabel() {
+    if (confirm('Apakah Anda yakin ingin generate label pengiriman?')) {
+        fetch(`/api/orders/{{ $order->id }}/generate-label`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Label berhasil di-generate!');
+                if (data.label_url) {
+                    window.open(data.label_url, '_blank');
+                }
+            } else {
+                alert('Gagal generate label: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Terjadi kesalahan saat generate label');
+        });
     }
 }
 </script>
