@@ -25,7 +25,7 @@ class AdminController extends Controller
         $openComplaints = Complaint::where('status', 'open')->count();
 
         // Get recent orders (last 5)
-        $recentOrders = Order::with('user')
+        $recentOrders = Order::with('customer')
             ->orderBy('created_at', 'desc')
             ->limit(5)
             ->get();
@@ -74,7 +74,7 @@ class AdminController extends Controller
         })->where('is_active', true)->count();
         $openComplaints = Complaint::where('status', 'open')->count();
 
-        $recentOrders = Order::with('user')
+        $recentOrders = Order::with('customer')
             ->orderBy('created_at', 'desc')
             ->limit(5)
             ->get();

@@ -109,6 +109,7 @@
                             <div>
                                 <p class="font-medium text-gray-900">#{{ $order->id }}</p>
                                 <p class="text-sm text-gray-500">{{ Str::limit($order->item_description, 30) }}</p>
+                                <p class="text-xs text-gray-400">{{ $order->customer->name ?? 'Unknown Customer' }}</p>
                             </div>
                             <div class="text-right">
                                 <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
@@ -286,6 +287,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div>
                         <p class="font-medium text-gray-900">#${order.id}</p>
                         <p class="text-sm text-gray-500">${order.item_description ? order.item_description.substring(0, 30) + (order.item_description.length > 30 ? '...' : '') : 'No description'}</p>
+                        <p class="text-xs text-gray-400">${order.customer ? order.customer.name : 'Unknown Customer'}</p>
                     </div>
                     <div class="text-right">
                         <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusClass}">

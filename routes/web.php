@@ -88,13 +88,9 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // All users can view order details and track
-    Route::get('/orders/{order}', function ($order) {
-        return view('orders.show', compact('order'));
-    })->name('orders.show');
+    Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
 
-    Route::get('/orders/{order}/track', function ($order) {
-        return view('orders.track', compact('order'));
-    })->name('orders.track');
+    Route::get('/orders/{order}/track', [OrderController::class, 'track'])->name('orders.track');
 
     // Complaints routes
     Route::get('/complaints', [ComplaintController::class, 'index'])->name('complaints.index');

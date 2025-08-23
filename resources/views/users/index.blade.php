@@ -11,7 +11,7 @@
                 <h1 class="text-3xl font-bold text-gray-900">Kelola Pengguna</h1>
                 <p class="mt-2 text-gray-600">Kelola semua pengguna sistem termasuk admin, kurir, dan customer</p>
             </div>
-            <a href="{{ route('users.create') }}"
+            <a href="{{ route('users.create') }}" 
                class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
                 <i class="fas fa-plus mr-2"></i>
                 Tambah Pengguna
@@ -84,7 +84,7 @@
             <!-- Role Filter -->
             <div>
                 <label for="role" class="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                <select id="role" name="role"
+                <select id="role" name="role" 
                         class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     <option value="">Semua Role</option>
                     @foreach($roles as $role)
@@ -98,7 +98,7 @@
             <!-- Status Filter -->
             <div>
                 <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select id="status" name="status"
+                <select id="status" name="status" 
                         class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     <option value="">Semua Status</option>
                     <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Aktif</option>
@@ -109,7 +109,7 @@
             <!-- Sort -->
             <div>
                 <label for="sort" class="block text-sm font-medium text-gray-700 mb-1">Urutkan</label>
-                <select id="sort" name="sort"
+                <select id="sort" name="sort" 
                         class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     <option value="latest" {{ request('sort') == 'latest' ? 'selected' : '' }}>Terbaru</option>
                     <option value="oldest" {{ request('sort') == 'oldest' ? 'selected' : '' }}>Terlama</option>
@@ -120,7 +120,7 @@
 
             <!-- Submit Button -->
             <div class="md:col-span-4 flex justify-end">
-                <button type="submit"
+                <button type="submit" 
                         class="inline-flex items-center px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors">
                     <i class="fas fa-search mr-2"></i>
                     Filter
@@ -178,7 +178,7 @@
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
+                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full 
                                 @if($user->role->name === 'admin') bg-red-100 text-red-800
                                 @elseif($user->role->name === 'courier') bg-green-100 text-green-800
                                 @else bg-purple-100 text-purple-800 @endif">
@@ -186,7 +186,7 @@
                             </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
+                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full 
                                 @if($user->is_active) bg-green-100 text-green-800 @else bg-red-100 text-red-800 @endif">
                                 {{ $user->is_active ? 'Aktif' : 'Tidak Aktif' }}
                             </span>
@@ -196,21 +196,21 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div class="flex items-center space-x-2">
-                                <a href="{{ route('users.show', $user) }}"
+                                <a href="{{ route('users.show', $user) }}" 
                                    class="text-blue-600 hover:text-blue-900 transition-colors" title="Lihat Detail">
                                     <i class="fas fa-eye"></i>
                                 </a>
-                                <a href="{{ route('users.edit', $user) }}"
+                                <a href="{{ route('users.edit', $user) }}" 
                                    class="text-yellow-600 hover:text-yellow-900 transition-colors" title="Edit">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <button onclick="toggleUserStatus({{ $user->id }})"
+                                <button onclick="toggleUserStatus({{ $user->id }})" 
                                         class="text-{{ $user->is_active ? 'red' : 'green' }}-600 hover:text-{{ $user->is_active ? 'red' : 'green' }}-900 transition-colors"
                                         title="{{ $user->is_active ? 'Nonaktifkan' : 'Aktifkan' }}">
                                     <i class="fas fa-{{ $user->is_active ? 'ban' : 'check' }}"></i>
                                 </button>
                                 @if(Auth::user()->id !== $user->id)
-                                <button onclick="deleteUser({{ $user->id }})"
+                                <button onclick="deleteUser({{ $user->id }})" 
                                         class="text-red-600 hover:text-red-900 transition-colors" title="Hapus">
                                     <i class="fas fa-trash"></i>
                                 </button>
@@ -225,7 +225,7 @@
                                 <i class="fas fa-users text-gray-400 text-4xl mb-4"></i>
                                 <p class="text-gray-500 text-lg font-medium">Belum ada pengguna</p>
                                 <p class="text-gray-400 text-sm mt-1">Mulai dengan menambahkan pengguna baru</p>
-                                <a href="{{ route('users.create') }}"
+                                <a href="{{ route('users.create') }}" 
                                    class="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
                                     <i class="fas fa-plus mr-2"></i>
                                     Tambah Pengguna Pertama

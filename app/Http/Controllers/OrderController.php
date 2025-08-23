@@ -191,33 +191,71 @@ class OrderController extends Controller
     }
 
     /**
-     * Get order details
+     * Track order
      */
-    public function show(Request $request, Order $order): JsonResponse
+    public function track(Request $request, Order $order)
     {
         try {
             $user = $request->user();
 
             // Check if user has access to this order
             if (!$user->isAdmin() && $order->customer_id !== $user->id && $order->courier_id !== $user->id) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Access denied',
-                ], 403);
+                return redirect()->route('orders.index')
+                    ->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk melacak pesanan ini.');
+            }
+
+            return view('orders.track', compact('order'));
+
+        } catch (\Exception $e) {
+            return redirect()->route('orders.index')
+                ->with('error', 'Gagal memuat halaman tracking. Silakan coba lagi.');
+        }
+    }
+
+    /**
+     * Get order details
+     */
+    public function show(Request $request, Order $order)
+    {
+        try {
+            $user = $request->user();
+
+            // Check if user has access to this order
+            if (!$user->isAdmin() && $order->customer_id !== $user->id && $order->courier_id !== $user->id) {
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Access denied',
+                    ], 403);
+                }
+
+                return redirect()->route('orders.index')
+                    ->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk melihat pesanan ini.');
             }
 
             $order->load(['customer', 'courier', 'admin', 'statusHistory.updatedBy']);
 
-            return response()->json([
-                'success' => true,
-                'data' => $order,
-            ]);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'data' => $order,
+                ]);
+            }
+
+            // Return view for web requests
+            return view('orders.show', compact('order'));
+
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to get order details',
-                'error' => $e->getMessage(),
-            ], 500);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to get order details',
+                    'error' => $e->getMessage(),
+                ], 500);
+            }
+
+            return redirect()->route('orders.index')
+                ->with('error', 'Gagal memuat detail pesanan. Silakan coba lagi.');
         }
     }
 

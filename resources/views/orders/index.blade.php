@@ -13,7 +13,7 @@
             </div>
             @if(Auth::user()->isCustomer())
             <div class="mt-4 sm:mt-0">
-                <a href="{{ route('orders.create') }}" 
+                <a href="{{ route('orders.create') }}"
                    class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
                     <i class="fas fa-plus mr-2"></i>
                     Buat Pesanan Baru
@@ -136,7 +136,7 @@
                             <div class="text-sm text-gray-500">{{ $order->item_weight }}kg</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full 
+                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
                                 @if($order->status === 'pending') bg-yellow-100 text-yellow-800
                                 @elseif($order->status === 'confirmed') bg-blue-100 text-blue-800
                                 @elseif($order->status === 'assigned') bg-indigo-100 text-indigo-800
@@ -151,25 +151,25 @@
                             {{ ucfirst($order->shipping_method) }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            Rp {{ number_format($order->total_cost, 0, ',', '.') }}
+                            Rp {{ number_format($order->total_amount, 0, ',', '.') }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {{ $order->created_at->format('d M Y H:i') }} WITA
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div class="flex items-center space-x-2">
-                                <a href="{{ route('orders.show', $order) }}" 
+                                <a href="{{ route('orders.show', $order) }}"
                                    class="text-blue-600 hover:text-blue-900 transition-colors">
                                     <i class="fas fa-eye"></i>
                                 </a>
                                 @if(Auth::user()->isAdmin() && $order->status === 'pending')
-                                <a href="{{ route('orders.edit', $order) }}" 
+                                <a href="{{ route('orders.edit', $order) }}"
                                    class="text-yellow-600 hover:text-yellow-900 transition-colors">
                                     <i class="fas fa-edit"></i>
                                 </a>
                                 @endif
                                 @if(Auth::user()->isAdmin() || Auth::user()->id === $order->courier_id)
-                                <a href="{{ route('orders.track', $order) }}" 
+                                <a href="{{ route('orders.track', $order) }}"
                                    class="text-green-600 hover:text-green-900 transition-colors">
                                     <i class="fas fa-truck"></i>
                                 </a>
@@ -185,7 +185,7 @@
                                 <p class="text-gray-500 text-lg font-medium">Belum ada pesanan</p>
                                 <p class="text-gray-400 text-sm mt-1">Mulai dengan membuat pesanan baru</p>
                                 @if(Auth::user()->isCustomer())
-                                <a href="{{ route('orders.create') }}" 
+                                <a href="{{ route('orders.create') }}"
                                    class="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
                                     <i class="fas fa-plus mr-2"></i>
                                     Buat Pesanan Pertama
@@ -222,7 +222,7 @@ document.getElementById('sort').addEventListener('change', function() {
     const form = document.createElement('form');
     form.method = 'GET';
     form.action = '{{ route("orders.index") }}';
-    
+
     // Add current filters
     const currentParams = new URLSearchParams(window.location.search);
     for (let [key, value] of currentParams) {
@@ -234,14 +234,14 @@ document.getElementById('sort').addEventListener('change', function() {
             form.appendChild(input);
         }
     }
-    
+
     // Add sort parameter
     const sortInput = document.createElement('input');
     sortInput.type = 'hidden';
     sortInput.name = 'sort';
     sortInput.value = this.value;
     form.appendChild(sortInput);
-    
+
     document.body.appendChild(form);
     form.submit();
 });
