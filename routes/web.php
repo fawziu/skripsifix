@@ -87,10 +87,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/orders/{order}', [OrderController::class, 'update'])->name('orders.update');
     });
 
-    // All users can view order details and track
+    // All users can view order details
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
 
-    Route::get('/orders/{order}/track', [OrderController::class, 'track'])->name('orders.track');
+    // Only admin can track orders
+    Route::get('/orders/{order}/track', [OrderController::class, 'track'])->middleware('admin')->name('orders.track');
 
     // Complaints routes
     Route::get('/complaints', [ComplaintController::class, 'index'])->name('complaints.index');
@@ -140,17 +141,58 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/provinces', [OrderController::class, 'getProvinces'])->name('provinces.index');
         Route::get('/cities', [OrderController::class, 'getCities'])->name('cities.index');
         Route::get('/addresses/districts', [AddressController::class, 'getDistricts'])->name('addresses.districts');
+
+
     });
 
     // Role-specific dashboard routes
     Route::get('/admin/dashboard', [App\Http\Controllers\AdminController::class, 'dashboard'])->middleware('admin')->name('admin.dashboard');
     Route::get('/admin/dashboard/data', [App\Http\Controllers\AdminController::class, 'getDashboardData'])->middleware('admin')->name('admin.dashboard.data');
 
-    Route::get('/courier/dashboard', function () {
-        return view('courier.dashboard');
-    })->middleware('courier')->name('courier.dashboard');
+    Route::get('/courier/dashboard', [App\Http\Controllers\CourierController::class, 'dashboard'])->middleware('courier')->name('courier.dashboard');
+    Route::get('/courier/dashboard/data', [App\Http\Controllers\CourierController::class, 'getDashboardData'])->middleware('courier')->name('courier.dashboard.data');
 
-    Route::get('/customer/dashboard', function () {
-        return view('customer.dashboard');
-    })->middleware('customer')->name('customer.dashboard');
+    // Courier order management routes
+    Route::get('/courier/orders', function() {
+        return view('courier.orders');
+    })->middleware('courier')->name('courier.orders.index');
+    Route::get('/courier/orders/{order}/detail', function($order) {
+        return view('courier.order-detail', compact('order'));
+    })->middleware('courier')->name('courier.orders.show');
+    Route::get('/courier/orders/{order}/api', [App\Http\Controllers\CourierController::class, 'getOrderDetails'])->middleware('courier')->name('courier.orders.api');
+    Route::put('/courier/orders/{order}/status', [App\Http\Controllers\CourierController::class, 'updateOrderStatus'])->middleware('courier')->name('courier.orders.update-status');
+
+    Route::get('/customer/dashboard', [App\Http\Controllers\CustomerController::class, 'dashboard'])->middleware('customer')->name('customer.dashboard');
+    Route::get('/customer/dashboard/data', [App\Http\Controllers\CustomerController::class, 'getDashboardData'])->middleware('customer')->name('customer.dashboard.data');
+
+    // Available couriers for manual delivery (accessible to all authenticated users)
+    Route::get('/available-couriers', [OrderController::class, 'getAvailableCouriers'])->name('available.couriers');
+
+    // Debug route for testing
+    Route::get('/debug-couriers', function() {
+        try {
+            $couriers = App\Models\User::getActiveCouriersWithPricing();
+            return response()->json([
+                'success' => true,
+                'count' => $couriers->count(),
+                'data' => $couriers->map(function($c) {
+                    return [
+                        'id' => $c->id,
+                        'name' => $c->name,
+                        'has_pricing' => $c->courierPricing ? true : false,
+                        'pricing_data' => $c->courierPricing ? [
+                            'base_fee' => $c->courierPricing->base_fee,
+                            'per_kg_fee' => $c->courierPricing->per_kg_fee,
+                        ] : null
+                    ];
+                })
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
+    })->name('debug.couriers');
 });

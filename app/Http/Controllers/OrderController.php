@@ -78,9 +78,11 @@ class OrderController extends Controller
             'origin_address' => 'required|string',
             'destination_address_id' => 'nullable|exists:addresses,id',
             'destination_address' => 'nullable|string',
-            'origin_province' => 'required_if:shipping_method,rajaongkir|integer',
-            'origin_city' => 'required_if:shipping_method,rajaongkir|integer',
-            'courier_service' => 'sometimes|string',
+            'origin_province' => 'nullable|integer',
+            'origin_city' => 'nullable|integer',
+            'courier_service' => 'nullable|string',
+            'courier_id' => 'nullable|exists:users,id',
+            'courier_pricing_id' => 'nullable|exists:courier_pricing,id',
             'shipping_cost' => 'required|numeric|min:0',
             'service_fee' => 'required|numeric|min:0',
             'total_cost' => 'required|numeric|min:0',
@@ -90,6 +92,16 @@ class OrderController extends Controller
         if ($request->shipping_method === 'rajaongkir') {
             if (!$request->origin_province || !$request->origin_city) {
                 $validator->errors()->add('shipping_method', 'Provinsi dan kota asal diperlukan untuk pengiriman via RajaOngkir.');
+            }
+            if (!$request->courier_service) {
+                $validator->errors()->add('courier_service', 'Pilih layanan kurir untuk pengiriman via RajaOngkir.');
+            }
+        }
+
+        // Additional validation for manual shipping method
+        if ($request->shipping_method === 'manual') {
+            if (!$request->courier_id || !$request->courier_pricing_id) {
+                $validator->errors()->add('shipping_method', 'Pilih kurir untuk pengiriman manual.');
             }
         }
 
@@ -145,6 +157,7 @@ class OrderController extends Controller
                 'destination_province' => $destinationAddress && $destinationAddress->province ? $destinationAddress->province->rajaongkir_id : null,
                 'destination_city' => $destinationAddress && $destinationAddress->city ? $destinationAddress->city->rajaongkir_id : null,
                 'courier_service' => $request->courier_service,
+                'courier_id' => $request->shipping_method === 'manual' ? $request->courier_id : null,
                 'shipping_cost' => $request->shipping_cost,
                 'service_fee' => $request->service_fee,
                 'total_cost' => $request->total_cost,
@@ -721,6 +734,49 @@ class OrderController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to get cached destinations',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Get available couriers with pricing for manual delivery
+     */
+    public function getAvailableCouriers(): JsonResponse
+    {
+        try {
+            Log::info('getAvailableCouriers called');
+
+            $couriers = User::getActiveCouriersWithPricing();
+
+            Log::info('Couriers found:', ['count' => $couriers->count()]);
+
+            $courierData = $couriers->map(function ($courier) {
+                return [
+                    'id' => $courier->id,
+                    'name' => $courier->name,
+                    'phone' => $courier->phone,
+                    'base_fee' => $courier->courierPricing->base_fee,
+                    'per_kg_fee' => $courier->courierPricing->per_kg_fee,
+                    'pricing_id' => $courier->courierPricing->id,
+                ];
+            });
+
+            Log::info('Courier data prepared:', ['data' => $courierData->toArray()]);
+
+            return response()->json([
+                'success' => true,
+                'data' => $courierData,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error in getAvailableCouriers:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to get available couriers',
                 'error' => $e->getMessage(),
             ], 500);
         }

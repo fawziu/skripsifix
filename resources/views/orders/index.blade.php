@@ -168,10 +168,16 @@
                                     <i class="fas fa-edit"></i>
                                 </a>
                                 @endif
-                                @if(Auth::user()->isAdmin() || Auth::user()->id === $order->courier_id)
+                                @if(Auth::user()->isAdmin())
                                 <a href="{{ route('orders.track', $order) }}"
                                    class="text-green-600 hover:text-green-900 transition-colors">
                                     <i class="fas fa-truck"></i>
+                                </a>
+                                @endif
+                                @if(Auth::user()->isCourier() && Auth::user()->id === $order->courier_id)
+                                <a href="{{ route('courier.orders.show', $order) }}"
+                                   class="text-green-600 hover:text-green-900 transition-colors">
+                                    <i class="fas fa-edit"></i>
                                 </a>
                                 @endif
                             </div>

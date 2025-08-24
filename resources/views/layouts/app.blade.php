@@ -5,27 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Logistics Management System')</title>
-    
+
     <!-- Web App Manifest -->
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#2563eb">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Afiyah">
-    
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <!-- Alpine.js -->
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    
+
     <style>
         [x-cloak] { display: none !important; }
     </style>
-    
+
     @stack('styles')
 </head>
 <body class="bg-gray-50 text-gray-900 antialiased">
@@ -47,7 +47,7 @@
                         <a href="{{ route('dashboard') }}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
                             <i class="fas fa-home mr-2"></i>Dashboard
                         </a>
-                        
+
                         @if(Auth::user()->isCustomer())
                             <a href="{{ route('orders.create') }}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
                                 <i class="fas fa-plus mr-2"></i>Buat Pesanan
@@ -56,14 +56,30 @@
                                 <i class="fas fa-map-marker-alt mr-2"></i>Alamat
                             </a>
                         @endif
-                        
-                        <a href="{{ route('orders.index') }}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
-                            <i class="fas fa-box mr-2"></i>Orders
-                        </a>
-                        <a href="{{ route('complaints.index') }}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
-                            <i class="fas fa-exclamation-triangle mr-2"></i>Complaints
-                        </a>
-                        
+
+                        @if(Auth::user()->isCourier())
+                            <a href="{{ route('courier.orders.index') }}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                                <i class="fas fa-box mr-2"></i>Kelola Pesanan
+                            </a>
+                        @else
+                            <a href="{{ route('orders.index') }}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                                <i class="fas fa-box mr-2"></i>Orders
+                            </a>
+                        @endif
+                        @if(Auth::user()->isCustomer())
+                            <a href="{{ route('complaints.index') }}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                                <i class="fas fa-exclamation-triangle mr-2"></i>Keluhan Saya
+                            </a>
+                        @elseif(Auth::user()->isCourier())
+                            <a href="{{ route('complaints.index') }}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                                <i class="fas fa-exclamation-triangle mr-2"></i>Keluhan Pengiriman
+                            </a>
+                        @else
+                            <a href="{{ route('complaints.index') }}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                                <i class="fas fa-exclamation-triangle mr-2"></i>Keluhan
+                            </a>
+                        @endif
+
                         <!-- User Menu -->
                         <div class="relative" x-data="{ open: false }">
                             <button @click="open = !open" class="flex items-center space-x-2 text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
@@ -71,7 +87,7 @@
                                 <span>{{ Auth::user()->name }}</span>
                                 <i class="fas fa-chevron-down text-xs"></i>
                             </button>
-                            
+
                             <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
                                 <a href="{{ route('profile') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                     <i class="fas fa-user mr-2"></i>Profile
@@ -110,7 +126,7 @@
                     <a href="{{ route('dashboard') }}" class="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md text-base font-medium">
                         <i class="fas fa-home mr-2"></i>Dashboard
                     </a>
-                    
+
                     @if(Auth::user()->isCustomer())
                         <a href="{{ route('orders.create') }}" class="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md text-base font-medium">
                             <i class="fas fa-plus mr-2"></i>Buat Pesanan
@@ -119,13 +135,29 @@
                             <i class="fas fa-map-marker-alt mr-2"></i>Alamat
                         </a>
                     @endif
-                    
-                    <a href="{{ route('orders.index') }}" class="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md text-base font-medium">
-                        <i class="fas fa-box mr-2"></i>Orders
-                    </a>
-                    <a href="{{ route('complaints.index') }}" class="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md text-base font-medium">
-                        <i class="fas fa-exclamation-triangle mr-2"></i>Complaints
-                    </a>
+
+                    @if(Auth::user()->isCourier())
+                        <a href="{{ route('courier.orders.index') }}" class="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md text-base font-medium">
+                            <i class="fas fa-box mr-2"></i>Kelola Pesanan
+                        </a>
+                    @else
+                        <a href="{{ route('orders.index') }}" class="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md text-base font-medium">
+                            <i class="fas fa-box mr-2"></i>Orders
+                        </a>
+                    @endif
+                    @if(Auth::user()->isCustomer())
+                        <a href="{{ route('complaints.index') }}" class="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md text-base font-medium">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>Keluhan Saya
+                        </a>
+                    @elseif(Auth::user()->isCourier())
+                        <a href="{{ route('complaints.index') }}" class="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md text-base font-medium">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>Keluhan Pengiriman
+                        </a>
+                    @else
+                        <a href="{{ route('complaints.index') }}" class="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md text-base font-medium">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>Keluhan
+                        </a>
+                    @endif
                     <a href="{{ route('profile') }}" class="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md text-base font-medium">
                         <i class="fas fa-user mr-2"></i>Profile
                     </a>

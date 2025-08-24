@@ -6,9 +6,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use App\Models\CourierPricing;
 
 class User extends Authenticatable
 {
@@ -151,5 +153,29 @@ class User extends Authenticatable
     public function isActive(): bool
     {
         return $this->is_active;
+    }
+
+    /**
+     * Get courier pricing (for couriers only)
+     */
+    public function courierPricing(): HasOne
+    {
+        return $this->hasOne(CourierPricing::class, 'courier_id');
+    }
+
+    /**
+     * Get available active couriers with pricing
+     */
+    public static function getActiveCouriersWithPricing()
+    {
+        return self::whereHas('role', function ($query) {
+            $query->where('name', 'courier');
+        })
+        ->where('is_active', true)
+        ->whereHas('courierPricing', function ($query) {
+            $query->where('is_active', true);
+        })
+        ->with('courierPricing')
+        ->get();
     }
 }

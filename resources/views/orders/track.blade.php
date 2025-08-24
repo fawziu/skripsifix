@@ -3,6 +3,22 @@
 @section('title', 'Track Order - Afiyah')
 
 @section('content')
+@if(!Auth::user()->isAdmin())
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            <div class="flex items-center">
+                <i class="fas fa-exclamation-triangle mr-2"></i>
+                <span>Anda tidak memiliki akses ke halaman ini.</span>
+            </div>
+        </div>
+        <div class="mt-4">
+            <a href="{{ route('orders.show', $order) }}" class="text-blue-600 hover:text-blue-800">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Kembali ke Detail Pesanan
+            </a>
+        </div>
+    </div>
+@else
 <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <!-- Header -->
     <div class="mb-8">
@@ -241,4 +257,5 @@ function showError(message) {
 }
 </script>
 @endpush
+@endif
 @endsection

@@ -120,6 +120,9 @@ class ComplaintService
     {
         $query = match (true) {
             $user->isAdmin() => Complaint::with(['user', 'order', 'assignedTo']),
+            $user->isCourier() => Complaint::whereHas('order', function($q) use ($user) {
+                $q->where('courier_id', $user->id);
+            })->with(['user', 'order', 'assignedTo']),
             default => Complaint::where('user_id', $user->id)->with(['order', 'assignedTo']),
         };
 

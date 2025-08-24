@@ -3,6 +3,22 @@
 @section('title', 'Create Complaint - Afiyah')
 
 @section('content')
+@if(!Auth::user()->isCustomer())
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            <div class="flex items-center">
+                <i class="fas fa-exclamation-triangle mr-2"></i>
+                <span>Hanya customer yang dapat membuat keluhan.</span>
+            </div>
+        </div>
+        <div class="mt-4">
+            <a href="{{ route('complaints.index') }}" class="text-blue-600 hover:text-blue-800">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Kembali ke Daftar Keluhan
+            </a>
+        </div>
+    </div>
+@else
 <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <!-- Header -->
     <div class="mb-8">
@@ -11,7 +27,7 @@
                 <h1 class="text-3xl font-bold text-gray-900">Laporkan Masalah</h1>
                 <p class="mt-2 text-gray-600">Buat laporan keluhan atau masalah baru</p>
             </div>
-            <a href="{{ route('complaints.index') }}" 
+            <a href="{{ route('complaints.index') }}"
                class="inline-flex items-center px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors">
                 <i class="fas fa-arrow-left mr-2"></i>
                 Kembali
@@ -23,12 +39,12 @@
     <div class="bg-white rounded-lg shadow-sm border border-gray-200">
         <form method="POST" action="{{ route('complaints.store') }}" class="p-6">
             @csrf
-            
+
             <div class="space-y-6">
                 <!-- Basic Information -->
                 <div>
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">Informasi Dasar</h3>
-                    
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <!-- Title -->
                         <div class="md:col-span-2">
@@ -97,7 +113,7 @@
                 <!-- Description -->
                 <div>
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">Detail Keluhan</h3>
-                    
+
                     <div>
                         <label for="description" class="block text-sm font-medium text-gray-700 mb-1">
                             Deskripsi Masalah <span class="text-red-500">*</span>
@@ -117,7 +133,7 @@
                 <!-- Additional Information -->
                 <div>
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">Informasi Tambahan</h3>
-                    
+
                     <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
                         <div class="flex">
                             <div class="flex-shrink-0">
@@ -140,7 +156,7 @@
 
                 <!-- Submit Button -->
                 <div class="flex justify-end pt-6">
-                    <button type="submit" 
+                    <button type="submit"
                             class="inline-flex items-center px-6 py-3 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors">
                         <i class="fas fa-paper-plane mr-2"></i>
                         Kirim Laporan
@@ -150,4 +166,5 @@
         </form>
     </div>
 </div>
+@endif
 @endsection

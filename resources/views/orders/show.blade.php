@@ -166,6 +166,31 @@
                 </div>
             </div>
             @endif
+
+            <!-- Tracking Information for Customer -->
+            @if(Auth::user()->isCustomer() && $order->shipping_method === 'rajaongkir' && $order->tracking_number)
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Informasi Tracking</h3>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">Tracking Number</p>
+                            <p class="text-sm text-gray-600 font-mono">{{ $order->tracking_number }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">Courier</p>
+                            <p class="text-sm text-gray-600">{{ strtoupper($order->courier_service) }}</p>
+                        </div>
+                    </div>
+                    <div id="tracking-info" class="bg-gray-50 rounded-lg p-4">
+                        <div class="flex items-center justify-center">
+                            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                            <span class="ml-3 text-gray-600">Memuat informasi tracking...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endif
         </div>
 
         <!-- Sidebar -->
@@ -229,11 +254,19 @@
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Aksi</h3>
                 <div class="space-y-3">
-                    @if(Auth::user()->isAdmin() || Auth::user()->id === $order->courier_id)
+                    @if(Auth::user()->isAdmin())
                     <a href="{{ route('orders.track', $order) }}"
                        class="w-full inline-flex items-center justify-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors">
                         <i class="fas fa-truck mr-2"></i>
                         Lacak Pesanan
+                    </a>
+                    @endif
+
+                    @if(Auth::user()->isCourier() && Auth::user()->id === $order->courier_id)
+                    <a href="{{ route('courier.orders.show', $order) }}"
+                       class="w-full inline-flex items-center justify-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors">
+                        <i class="fas fa-truck mr-2"></i>
+                        Update Status
                     </a>
                     @endif
 
@@ -313,6 +346,82 @@ function generateLabel() {
             alert('Terjadi kesalahan saat generate label');
         });
     }
+}
+
+// Load tracking info for customer
+document.addEventListener('DOMContentLoaded', function() {
+    const trackingInfo = document.getElementById('tracking-info');
+    if (trackingInfo) {
+        loadTrackingInfo();
+    }
+});
+
+function loadTrackingInfo() {
+    const trackingInfo = document.getElementById('tracking-info');
+
+    fetch(`/api/orders/{{ $order->id }}/track`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.data) {
+            displayTrackingInfo(data.data);
+        } else {
+            showTrackingError(data.message || 'Gagal memuat informasi tracking');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showTrackingError('Terjadi kesalahan saat memuat informasi tracking');
+    });
+}
+
+function displayTrackingInfo(trackingData) {
+    const trackingInfo = document.getElementById('tracking-info');
+
+    if (trackingData.manifest && trackingData.manifest.length > 0) {
+        let html = '<div class="space-y-3">';
+        trackingData.manifest.slice(0, 5).forEach((item, index) => {
+            html += `
+                <div class="flex items-start space-x-3">
+                    <div class="flex-shrink-0">
+                        <div class="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                            <i class="fas fa-truck text-blue-600 text-xs"></i>
+                        </div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-gray-900">${item.manifest_description || 'Update Status'}</p>
+                        <p class="text-xs text-gray-500">${item.manifest_date || 'N/A'} ${item.manifest_time || ''}</p>
+                        ${item.city_name ? `<p class="text-xs text-gray-600 mt-1">${item.city_name}</p>` : ''}
+                    </div>
+                </div>
+                ${index < Math.min(4, trackingData.manifest.length - 1) ? '<div class="ml-3 border-l-2 border-gray-200 h-3"></div>' : ''}
+            `;
+        });
+        html += '</div>';
+        trackingInfo.innerHTML = html;
+    } else {
+        trackingInfo.innerHTML = `
+            <div class="text-center text-gray-500">
+                <i class="fas fa-info-circle text-2xl mb-2"></i>
+                <p class="text-sm">Belum ada informasi tracking yang tersedia</p>
+            </div>
+        `;
+    }
+}
+
+function showTrackingError(message) {
+    const trackingInfo = document.getElementById('tracking-info');
+    trackingInfo.innerHTML = `
+        <div class="text-center text-red-500">
+            <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+            <p class="text-sm">${message}</p>
+        </div>
+    `;
 }
 </script>
 @endpush

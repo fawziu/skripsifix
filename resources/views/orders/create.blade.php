@@ -49,11 +49,12 @@
                                 Berat Barang (kg) <span class="text-red-500">*</span>
                             </label>
                             <div class="relative">
-                                <input type="number" id="item_weight" name="item_weight" step="0.1" min="0.1" required
-                                       @change="calculateShipping()"
-                                       class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('item_weight') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror"
-                                       placeholder="0.5"
-                                       value="{{ old('item_weight') }}">
+                                                            <input type="number" id="item_weight" name="item_weight" step="0.1" min="0.1" required
+                                   @change="calculateShipping()"
+                                   @input="updateCourierFees()"
+                                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('item_weight') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror"
+                                   placeholder="0.5"
+                                   value="{{ old('item_weight') }}">
                                 <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                                     <span class="text-gray-500 text-sm">kg</span>
                                 </div>
@@ -101,7 +102,7 @@
                                         <span class="flex flex-col">
                                             <span class="block text-sm font-medium text-gray-900">Manual</span>
                                             <span class="mt-1 flex items-center text-sm text-gray-500">
-                                                Pengiriman manual dengan biaya tetap
+                                                Pengiriman manual dengan kurir aktif
                                             </span>
                                         </span>
                                     </span>
@@ -121,6 +122,25 @@
                             @error('shipping_method')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
+                        </div>
+
+                        <!-- Manual Courier Selection (Hidden by default) -->
+                        <div id="manual_courier_fields" class="hidden md:col-span-2">
+                            <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                                <h4 class="text-sm font-medium text-green-900 mb-2">Pilih Kurir Manual</h4>
+                                <div class="space-y-3">
+                                    <div id="courier_loading" class="text-center py-4">
+                                        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600 mx-auto"></div>
+                                        <p class="mt-2 text-sm text-green-700">Memuat daftar kurir...</p>
+                                    </div>
+                                    <div id="courier_list" class="hidden space-y-2">
+                                        <!-- Courier options will be loaded here -->
+                                    </div>
+                                    <div id="no_couriers" class="hidden text-center py-4">
+                                        <p class="text-sm text-gray-500">Tidak ada kurir aktif saat ini</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Origin Address -->
@@ -257,6 +277,8 @@
                 <input type="hidden" id="selected_courier_service" name="courier_service" value="">
                 <input type="hidden" id="selected_courier_cost" name="courier_cost" value="">
                 <input type="hidden" id="selected_courier_etd" name="courier_etd" value="">
+                <input type="hidden" id="selected_courier_id" name="courier_id" value="">
+                <input type="hidden" id="selected_courier_pricing_id" name="courier_pricing_id" value="">
 
                 <!-- Submit Button -->
                 <div class="flex justify-end pt-6">
@@ -289,9 +311,15 @@ function orderForm() {
 
             if (method === 'rajaongkir') {
                 document.getElementById('rajaongkir_fields').classList.remove('hidden');
+                document.getElementById('manual_courier_fields').classList.add('hidden');
                 this.loadProvinces();
+            } else if (method === 'manual') {
+                document.getElementById('rajaongkir_fields').classList.add('hidden');
+                document.getElementById('manual_courier_fields').classList.remove('hidden');
+                this.loadAvailableCouriers();
             } else {
                 document.getElementById('rajaongkir_fields').classList.add('hidden');
+                document.getElementById('manual_courier_fields').classList.add('hidden');
             }
 
             this.updateCostSummary();
@@ -350,6 +378,148 @@ function orderForm() {
                     });
                 })
                 .catch(error => console.error('Error loading cities:', error));
+        },
+
+        loadAvailableCouriers() {
+            const loadingDiv = document.getElementById('courier_loading');
+            const courierList = document.getElementById('courier_list');
+            const noCouriers = document.getElementById('no_couriers');
+
+            // Show loading
+            loadingDiv.classList.remove('hidden');
+            courierList.classList.add('hidden');
+            noCouriers.classList.add('hidden');
+
+                        fetch('/available-couriers')
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    console.log('Response headers:', response.headers);
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        throw new Error('Response is not JSON');
+                    }
+
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Courier data received:', data);
+                    loadingDiv.classList.add('hidden');
+
+                    if (data.success && data.data && data.data.length > 0) {
+                        courierList.classList.remove('hidden');
+                        this.displayCourierOptions(data.data);
+                    } else {
+                        noCouriers.classList.remove('hidden');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading couriers:', error);
+                    loadingDiv.classList.add('hidden');
+                    noCouriers.classList.remove('hidden');
+
+                    // Show error message to user
+                    const errorMessage = document.createElement('div');
+                    errorMessage.className = 'text-center py-4 text-red-600';
+                    errorMessage.innerHTML = `<p class="text-sm">Error: ${error.message}</p>`;
+                    noCouriers.appendChild(errorMessage);
+                });
+        },
+
+        displayCourierOptions(couriers) {
+            const courierList = document.getElementById('courier_list');
+            const itemWeight = parseFloat(document.getElementById('item_weight').value) || 0;
+
+            courierList.innerHTML = couriers.map((courier, index) => {
+                const totalFee = courier.base_fee + (courier.per_kg_fee * itemWeight);
+                const isSelected = index === 0; // Select first courier by default
+
+                if (isSelected) {
+                    // Set the selected courier data
+                    document.getElementById('selected_courier_id').value = courier.id;
+                    document.getElementById('selected_courier_pricing_id').value = courier.pricing_id;
+                }
+
+                return `
+                    <label class="relative flex cursor-pointer rounded-lg border ${isSelected ? 'border-green-500 bg-green-50' : 'border-gray-300 bg-white'} p-4 shadow-sm focus:outline-none">
+                        <input type="radio" name="selected_courier" value="${courier.id}"
+                               data-pricing-id="${courier.pricing_id}"
+                               data-base-fee="${courier.base_fee}"
+                               data-per-kg-fee="${courier.per_kg_fee}"
+                               ${isSelected ? 'checked' : ''}
+                               @change="selectCourier()" class="sr-only">
+                        <span class="flex flex-1">
+                            <span class="flex flex-col">
+                                <span class="block text-sm font-medium text-gray-900">${courier.name}</span>
+                                <span class="mt-1 flex items-center text-sm text-gray-500">
+                                    <i class="fas fa-phone mr-1"></i>${courier.phone || 'Tidak ada nomor telepon'}
+                                </span>
+                                <span class="mt-1 text-xs text-gray-400">
+                                    Biaya dasar: Rp${courier.base_fee.toLocaleString()} + Rp${courier.per_kg_fee.toLocaleString()}/kg
+                                </span>
+                            </span>
+                        </span>
+                        <span class="flex flex-col items-end">
+                            <span class="text-sm font-medium text-gray-900">Rp${totalFee.toLocaleString()}</span>
+                            ${isSelected ? '<span class="text-xs text-green-600">Terpilih</span>' : ''}
+                        </span>
+                    </label>
+                `;
+            }).join('');
+
+            // Update cost summary after displaying couriers
+            this.updateCostSummary();
+        },
+
+                selectCourier() {
+            const selectedCourier = document.querySelector('input[name="selected_courier"]:checked');
+            if (selectedCourier) {
+                document.getElementById('selected_courier_id').value = selectedCourier.value;
+                document.getElementById('selected_courier_pricing_id').value = selectedCourier.dataset.pricingId;
+
+                // Update visual selection
+                document.querySelectorAll('input[name="selected_courier"]').forEach((radio, index) => {
+                    const label = radio.closest('label');
+                    if (radio.checked) {
+                        label.classList.remove('border-gray-300', 'bg-white');
+                        label.classList.add('border-green-500', 'bg-green-50');
+                        label.querySelector('.text-xs').textContent = 'Terpilih';
+                    } else {
+                        label.classList.remove('border-green-500', 'bg-green-50');
+                        label.classList.add('border-gray-300', 'bg-white');
+                        label.querySelector('.text-xs').textContent = '';
+                    }
+                });
+
+                this.updateCostSummary();
+            }
+        },
+
+        updateCourierFees() {
+            if (this.shippingMethod === 'manual') {
+                const itemWeight = parseFloat(document.getElementById('item_weight').value) || 0;
+
+                // Update courier fee displays
+                document.querySelectorAll('input[name="selected_courier"]').forEach(radio => {
+                    const label = radio.closest('label');
+                    const baseFee = parseFloat(radio.dataset.baseFee) || 0;
+                    const perKgFee = parseFloat(radio.dataset.perKgFee) || 0;
+                    const totalFee = baseFee + (perKgFee * itemWeight);
+
+                    // Update the fee display
+                    const feeElement = label.querySelector('.text-sm.font-medium.text-gray-900');
+                    if (feeElement) {
+                        feeElement.textContent = `Rp${totalFee.toLocaleString()}`;
+                    }
+                });
+
+                // Update cost summary
+                this.updateCostSummary();
+            }
         },
 
         calculateShipping() {
@@ -450,18 +620,34 @@ function orderForm() {
             let courierEtd = '';
 
             if (this.shippingMethod === 'manual') {
-                // Manual shipping cost calculation
-                if (itemWeight <= 1) {
-                    shippingCost = 15000;
-                } else if (itemWeight <= 5) {
-                    shippingCost = 25000;
-                } else if (itemWeight <= 10) {
-                    shippingCost = 40000;
+                // Get selected courier for manual delivery
+                const selectedCourier = document.querySelector('input[name="selected_courier"]:checked');
+
+                if (selectedCourier) {
+                    const baseFee = parseFloat(selectedCourier.dataset.baseFee) || 0;
+                    const perKgFee = parseFloat(selectedCourier.dataset.perKgFee) || 0;
+                    shippingCost = baseFee + (perKgFee * itemWeight);
+                    serviceFee = 3000; // Reduced service fee for manual delivery
+                    courierService = 'manual';
+                    courierCost = shippingCost;
+                    courierEtd = '1-3 hari';
+
+                    // Clear courier_service for manual delivery
+                    document.getElementById('selected_courier_service').value = 'manual';
                 } else {
-                    shippingCost = 40000 + (Math.ceil(itemWeight - 10) * 3000);
+                    // Fallback to old calculation if no courier selected
+                    if (itemWeight <= 1) {
+                        shippingCost = 15000;
+                    } else if (itemWeight <= 5) {
+                        shippingCost = 25000;
+                    } else if (itemWeight <= 10) {
+                        shippingCost = 40000;
+                    } else {
+                        shippingCost = 40000 + (Math.ceil(itemWeight - 10) * 3000);
+                    }
+                    serviceFee = 5000;
+                    courierService = 'manual';
                 }
-                serviceFee = 5000;
-                courierService = 'manual';
             } else if (shippingData && shippingData.length > 0) {
                 // Display all available options and use the cheapest
                 this.displayShippingOptions(shippingData);
@@ -477,6 +663,20 @@ function orderForm() {
                 courierEtd = cheapest.etd || '1-2 hari';
 
                 console.log('Selected cheapest option:', cheapest);
+            } else if (this.shippingMethod === 'rajaongkir') {
+                // For RajaOngkir without shipping data, use selected courier
+                const selectedCourier = document.getElementById('courier_select').value;
+                if (selectedCourier) {
+                    courierService = selectedCourier;
+                    // Set default values if no shipping data
+                    shippingCost = 0;
+                    serviceFee = 3000;
+                    courierCost = 0;
+                    courierEtd = '1-2 hari';
+
+                    // Set courier_service for RajaOngkir
+                    document.getElementById('selected_courier_service').value = selectedCourier;
+                }
             }
 
             const total = itemPrice + shippingCost + serviceFee;
@@ -494,6 +694,23 @@ function orderForm() {
             document.getElementById('selected_courier_service').value = courierService;
             document.getElementById('selected_courier_cost').value = courierCost;
             document.getElementById('selected_courier_etd').value = courierEtd;
+
+            // Debug: Log the values being set
+            console.log('Setting hidden fields:', {
+                shippingCost,
+                serviceFee,
+                total,
+                courierService,
+                courierCost,
+                courierEtd,
+                shippingMethod: this.shippingMethod
+            });
+
+            // Clear courier_id and courier_pricing_id for RajaOngkir
+            if (this.shippingMethod === 'rajaongkir') {
+                document.getElementById('selected_courier_id').value = '';
+                document.getElementById('selected_courier_pricing_id').value = '';
+            }
 
             // Show/hide cost summary
             if (itemPrice > 0 || shippingCost > 0) {
@@ -625,6 +842,12 @@ function validateForm() {
         if (!courierService) {
             alert('Pilih kurir untuk pengiriman RajaOngkir');
             document.getElementById('courier_select').focus();
+            return false;
+        }
+    } else if (shippingMethod.value === 'manual') {
+        const selectedCourier = document.querySelector('input[name="selected_courier"]:checked');
+        if (!selectedCourier) {
+            alert('Pilih kurir untuk pengiriman manual');
             return false;
         }
     }

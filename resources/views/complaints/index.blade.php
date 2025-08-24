@@ -8,15 +8,33 @@
     <div class="mb-8">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <h1 class="text-3xl font-bold text-gray-900">Keluhan</h1>
-                <p class="mt-2 text-gray-600">Kelola semua keluhan dan laporan masalah</p>
+                <h1 class="text-3xl font-bold text-gray-900">
+                    @if(Auth::user()->isCustomer())
+                        Keluhan Saya
+                    @elseif(Auth::user()->isCourier())
+                        Keluhan Pengiriman
+                    @else
+                        Keluhan
+                    @endif
+                </h1>
+                <p class="mt-2 text-gray-600">
+                    @if(Auth::user()->isCustomer())
+                        Kelola keluhan dan laporan masalah Anda
+                    @elseif(Auth::user()->isCourier())
+                        Keluhan terkait pengiriman yang Anda tangani
+                    @else
+                        Kelola semua keluhan dan laporan masalah
+                    @endif
+                </p>
             </div>
             <div class="mt-4 sm:mt-0">
-                <a href="{{ route('complaints.create') }}" 
+                @if(Auth::user()->isCustomer())
+                <a href="{{ route('complaints.create') }}"
                    class="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors">
                     <i class="fas fa-plus mr-2"></i>
                     Laporkan Masalah
                 </a>
+                @endif
             </div>
         </div>
     </div>
@@ -142,7 +160,7 @@
                             {{ ucfirst($complaint->type) }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full 
+                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
                                 @if($complaint->priority === 'low') bg-green-100 text-green-800
                                 @elseif($complaint->priority === 'medium') bg-yellow-100 text-yellow-800
                                 @elseif($complaint->priority === 'high') bg-orange-100 text-orange-800
@@ -151,7 +169,7 @@
                             </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full 
+                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
                                 @if($complaint->status === 'open') bg-red-100 text-red-800
                                 @elseif($complaint->status === 'in_progress') bg-yellow-100 text-yellow-800
                                 @elseif($complaint->status === 'resolved') bg-green-100 text-green-800
@@ -164,12 +182,12 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div class="flex items-center space-x-2">
-                                <a href="{{ route('complaints.show', $complaint) }}" 
+                                <a href="{{ route('complaints.show', $complaint) }}"
                                    class="text-blue-600 hover:text-blue-900 transition-colors">
                                     <i class="fas fa-eye"></i>
                                 </a>
                                 @if(Auth::user()->isAdmin() && $complaint->status === 'open')
-                                <a href="{{ route('complaints.edit', $complaint) }}" 
+                                <a href="{{ route('complaints.edit', $complaint) }}"
                                    class="text-yellow-600 hover:text-yellow-900 transition-colors">
                                     <i class="fas fa-edit"></i>
                                 </a>
@@ -192,7 +210,7 @@
                                 <i class="fas fa-exclamation-triangle text-gray-400 text-4xl mb-4"></i>
                                 <p class="text-gray-500 text-lg font-medium">Belum ada keluhan</p>
                                 <p class="text-gray-400 text-sm mt-1">Mulai dengan melaporkan masalah</p>
-                                <a href="{{ route('complaints.create') }}" 
+                                <a href="{{ route('complaints.create') }}"
                                    class="mt-4 inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors">
                                     <i class="fas fa-plus mr-2"></i>
                                     Laporkan Masalah Pertama
@@ -228,7 +246,7 @@ document.getElementById('sort').addEventListener('change', function() {
     const form = document.createElement('form');
     form.method = 'GET';
     form.action = '{{ route("complaints.index") }}';
-    
+
     // Add current filters
     const currentParams = new URLSearchParams(window.location.search);
     for (let [key, value] of currentParams) {
@@ -240,14 +258,14 @@ document.getElementById('sort').addEventListener('change', function() {
             form.appendChild(input);
         }
     }
-    
+
     // Add sort parameter
     const sortInput = document.createElement('input');
     sortInput.type = 'hidden';
     sortInput.name = 'sort';
     sortInput.value = this.value;
     form.appendChild(sortInput);
-    
+
     document.body.appendChild(form);
     form.submit();
 });

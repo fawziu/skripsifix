@@ -29,6 +29,7 @@ class OrderService
             $order = Order::create([
                 'order_number' => Order::generateOrderNumber(),
                 'customer_id' => $customer->id,
+                'courier_id' => $data['courier_id'] ?? null,
                 'item_description' => $data['item_description'],
                 'item_weight' => $data['item_weight'],
                 'item_price' => $data['item_price'],
