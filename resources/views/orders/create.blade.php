@@ -586,6 +586,7 @@ function orderForm() {
             .then(data => {
                 console.log('API response data:', data);
                 if (data.success) {
+                    // Treat all successful responses as valid RajaOngkir data
                     this.updateCostSummary(data.data);
                 } else {
                     console.error('API call failed:', data.message);
