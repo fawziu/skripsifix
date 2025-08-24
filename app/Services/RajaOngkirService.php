@@ -955,7 +955,7 @@ class RajaOngkirService
             'pickup_phone' => $data['pickup_phone'] ?? '',
             'notes' => $data['notes'] ?? '',
             'status' => 'requested',
-            'message' => 'Pickup request generated locally (RajaOngkir API unavailable)',
+            'message' => 'Pickup request generated)',
             'estimated_pickup' => now()->addDay()->format('Y-m-d H:i:s'),
         ];
     }

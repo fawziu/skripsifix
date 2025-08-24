@@ -63,5 +63,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/orders/{order}/track', [OrderController::class, 'trackOrder']);
     Route::post('/orders/{order}/generate-label', [OrderController::class, 'generateLabel']);
 
+    // Order status updates
+    Route::put('/orders/{order}/status', [OrderController::class, 'updateStatus']);
+
 
 });

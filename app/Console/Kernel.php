@@ -13,6 +13,12 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         // $schedule->command('inspire')->hourly();
+
+        // Update pickup status every 3 minutes
+        $schedule->command('pickup:update-status')
+                ->everyThreeMinutes()
+                ->withoutOverlapping()
+                ->runInBackground();
     }
 
     /**

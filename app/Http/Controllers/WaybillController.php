@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Services\RajaOngkirService;
+use App\Services\WhatsAppNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
@@ -12,10 +13,12 @@ use Illuminate\Support\Facades\Validator;
 class WaybillController extends Controller
 {
     private RajaOngkirService $rajaOngkirService;
+    private WhatsAppNotificationService $whatsappService;
 
-    public function __construct(RajaOngkirService $rajaOngkirService)
+    public function __construct(RajaOngkirService $rajaOngkirService, WhatsAppNotificationService $whatsappService)
     {
         $this->rajaOngkirService = $rajaOngkirService;
+        $this->whatsappService = $whatsappService;
     }
 
     /**
@@ -315,18 +318,18 @@ class WaybillController extends Controller
     public function pickup(Request $request, Order $order): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'pickup_date' => 'required|date|after:today',
-            'pickup_time' => 'required|string',
-            'pickup_address' => 'required|string',
-            'pickup_contact' => 'required|string',
-            'pickup_phone' => 'required|string',
-            'notes' => 'sometimes|string',
+            'pickup_date' => 'required|date|after_or_equal:today',
+            'pickup_time' => 'required|string|in:08:00-10:00,10:00-12:00,13:00-15:00,15:00-17:00',
+            'pickup_address' => 'required|string|min:10',
+            'pickup_contact' => 'required|string|min:2',
+            'pickup_phone' => 'required|string|min:10',
+            'notes' => 'nullable|string|max:500',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Validation failed',
+                'message' => 'Validasi gagal: ' . $validator->errors()->first(),
                 'errors' => $validator->errors(),
             ], 422);
         }
@@ -336,6 +339,22 @@ class WaybillController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Order does not have a waybill number',
+                ], 400);
+            }
+
+            // Check if order is already picked up
+            if ($order->status === 'picked_up') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Order has already been picked up',
+                ], 400);
+            }
+
+            // Check if pickup request already exists
+            if (isset($order->metadata['pickup_request'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Pickup request already exists for this order',
                 ], 400);
             }
 
@@ -350,27 +369,27 @@ class WaybillController extends Controller
             $result = $this->rajaOngkirService->pickup($pickupData);
 
             if ($result) {
-                // Update order status to picked up
+                // Store pickup data in order metadata first
                 $order->update([
-                    'status' => 'picked_up',
+                    'metadata' => array_merge($order->metadata ?? [], [
+                        'pickup_request' => array_merge($request->all(), [
+                            'pickup_id' => $result['pickup_id'] ?? null,
+                            'requested_at' => now()->toISOString(),
+                            'requested_by' => auth()->id(),
+                        ])
+                    ])
                 ]);
 
-                // Create status history
+                // Create status history for pickup request
                 $order->statusHistory()->create([
-                    'status' => 'picked_up',
+                    'status' => 'confirmed',
                     'notes' => 'Pickup requested: ' . $request->pickup_date . ' ' . $request->pickup_time .
                                ($result['message'] ? ' - ' . $result['message'] : ''),
                     'updated_by' => auth()->id(),
                 ]);
 
-                // Store pickup data in order metadata if available
-                if (isset($result['pickup_id'])) {
-                    $order->update([
-                        'metadata' => array_merge($order->metadata ?? [], [
-                            'pickup_request' => $result
-                        ])
-                    ]);
-                }
+                // Generate WhatsApp notification link
+                $whatsappLink = $this->whatsappService->generatePickupRequestLink($order, $request->all());
 
                 return response()->json([
                     'success' => true,
@@ -378,6 +397,7 @@ class WaybillController extends Controller
                                  ($result['message'] && $result['message'] !== 'Pickup request (sandbox mode)' ?
                                   ' - ' . $result['message'] : ''),
                     'data' => $result,
+                    'whatsapp_link' => $whatsappLink,
                 ]);
             }
 

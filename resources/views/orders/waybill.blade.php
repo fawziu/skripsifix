@@ -39,11 +39,21 @@
                     <i class="fas fa-print mr-2"></i>
                     Cetak Waybill
                 </button>
-                <button onclick="requestPickup()"
-                       class="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors">
-                    <i class="fas fa-truck mr-2"></i>
-                    Request Pickup
-                </button>
+                @if($order->status !== 'picked_up')
+                    @if(isset($order->metadata['pickup_request']))
+                        <button onclick="showPickupInfo()"
+                               class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            Info Pickup
+                        </button>
+                    @else
+                        <button onclick="requestPickup()"
+                               class="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors">
+                            <i class="fas fa-truck mr-2"></i>
+                            Request Pickup
+                        </button>
+                    @endif
+                @endif
                 @endif
             </div>
         </div>
@@ -95,7 +105,15 @@
             </div>
             <div>
                 <span class="text-sm font-medium text-gray-600">Courier Service:</span>
-                <p class="text-sm text-gray-900 mt-1 font-medium">{{ strtoupper($order->courier_service ?? 'N/A') }}</p>
+                <p class="text-sm text-gray-900 mt-1 font-medium">
+                    @if($order->courier_service)
+                        {{ strtoupper($order->courier_service) }}
+                    @elseif($order->shipping_method === 'rajaongkir')
+                        <span class="text-orange-600 italic">Belum dipilih</span>
+                    @else
+                        <span class="text-gray-500 italic">Manual Delivery</span>
+                    @endif
+                </p>
             </div>
             <div>
                 <span class="text-sm font-medium text-gray-600">Total Biaya:</span>
@@ -121,7 +139,13 @@
                     </div>
                     <div>
                         <span class="text-sm font-medium text-green-700">Courier:</span>
-                        <p class="text-sm text-green-900">{{ strtoupper($order->courier_service) }}</p>
+                        <p class="text-sm text-green-900">
+                            @if($order->courier_service)
+                                {{ strtoupper($order->courier_service) }}
+                            @else
+                                <span class="text-orange-600 italic">Belum dipilih</span>
+                            @endif
+                        </p>
                     </div>
                     <div>
                         <span class="text-sm font-medium text-green-700">Status:</span>
@@ -220,6 +244,66 @@
             </div>
         </div>
         @endif
+    </div>
+    @endif
+
+    <!-- Pickup Information -->
+    @if(isset($order->metadata['pickup_request']))
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6 no-print">
+        <div class="flex items-center mb-4">
+            <i class="fas fa-truck text-orange-500 text-xl mr-3"></i>
+            <h3 class="text-lg font-semibold text-gray-900">Informasi Pickup</h3>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-orange-50 rounded-lg p-4">
+                <h4 class="font-medium text-orange-900 mb-3">Pickup Details</h4>
+                <div class="space-y-3">
+                    <div>
+                        <span class="text-sm font-medium text-orange-700">Tanggal Pickup:</span>
+                        <p class="text-sm text-orange-900">{{ $order->metadata['pickup_request']['pickup_date'] ?? 'N/A' }}</p>
+                    </div>
+                    <div>
+                        <span class="text-sm font-medium text-orange-700">Waktu Pickup:</span>
+                        <p class="text-sm text-orange-900">{{ $order->metadata['pickup_request']['pickup_time'] ?? 'N/A' }}</p>
+                    </div>
+                    <div>
+                        <span class="text-sm font-medium text-orange-700">Status:</span>
+                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
+                            @if($order->status === 'picked_up') bg-green-100 text-green-800
+                            @else bg-yellow-100 text-yellow-800 @endif">
+                            @if($order->status === 'picked_up')
+                                Sudah Diambil
+                            @else
+                                Menunggu Pickup
+                            @endif
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-blue-50 rounded-lg p-4">
+                <h4 class="font-medium text-blue-900 mb-3">Pickup Address</h4>
+                <div class="space-y-3">
+                    <div>
+                        <span class="text-sm font-medium text-blue-700">Alamat:</span>
+                        <p class="text-sm text-blue-900">{{ $order->metadata['pickup_request']['pickup_address'] ?? 'N/A' }}</p>
+                    </div>
+                    <div>
+                        <span class="text-sm font-medium text-blue-700">Kontak:</span>
+                        <p class="text-sm text-blue-900">{{ $order->metadata['pickup_request']['pickup_contact'] ?? 'N/A' }}</p>
+                    </div>
+                    <div>
+                        <span class="text-sm font-medium text-blue-700">Telepon:</span>
+                        <p class="text-sm text-blue-900">{{ $order->metadata['pickup_request']['pickup_phone'] ?? 'N/A' }}</p>
+                    </div>
+                    @if(isset($order->metadata['pickup_request']['notes']) && !empty($order->metadata['pickup_request']['notes']))
+                    <div>
+                        <span class="text-sm font-medium text-blue-700">Catatan:</span>
+                        <p class="text-sm text-blue-900">{{ $order->metadata['pickup_request']['notes'] }}</p>
+                    </div>
+                    @endif
+                </div>
+            </div>
+        </div>
     </div>
     @endif
 
@@ -394,6 +478,65 @@
     </div>
     @endif
 
+    <!-- Pickup Info Modal -->
+    <div id="pickup-info-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-gray-900">Informasi Pickup</h3>
+                    <button onclick="closePickupInfoModal()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="bg-blue-50 rounded-lg p-4">
+                        <h4 class="font-medium text-blue-900 mb-3">Pickup Details</h4>
+                        <div class="space-y-2 text-sm">
+                            <div>
+                                <span class="font-medium text-blue-700">Tanggal:</span>
+                                <p class="text-blue-900" id="pickup-date-info"></p>
+                            </div>
+                            <div>
+                                <span class="font-medium text-blue-700">Waktu:</span>
+                                <p class="text-blue-900" id="pickup-time-info"></p>
+                            </div>
+                            <div>
+                                <span class="font-medium text-blue-700">Status:</span>
+                                <p class="text-blue-900" id="pickup-status-info"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-green-50 rounded-lg p-4">
+                        <h4 class="font-medium text-green-900 mb-3">Pickup Address</h4>
+                        <div class="space-y-2 text-sm">
+                            <div>
+                                <span class="font-medium text-green-700">Alamat:</span>
+                                <p class="text-green-900" id="pickup-address-info"></p>
+                            </div>
+                            <div>
+                                <span class="font-medium text-green-700">Kontak:</span>
+                                <p class="text-green-900" id="pickup-contact-info"></p>
+                            </div>
+                            <div>
+                                <span class="font-medium text-green-700">Telepon:</span>
+                                <p class="text-green-900" id="pickup-phone-info"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <button onclick="closePickupInfoModal()"
+                                class="px-4 py-2 bg-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-400">
+                            Tutup
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Pickup Request Modal -->
     <div id="pickup-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
         <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
@@ -408,8 +551,9 @@
                 <form id="pickup-form" class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Tanggal Pickup</label>
-                        <input type="date" name="pickup_date" required min="{{ date('Y-m-d', strtotime('+1 day')) }}"
+                        <input type="date" name="pickup_date" required min="{{ date('Y-m-d') }}"
                                class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                        <p class="text-xs text-gray-500 mt-1">Pilih tanggal hari ini atau setelahnya</p>
                     </div>
 
                     <div>
@@ -425,20 +569,26 @@
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Alamat Pickup</label>
-                        <textarea name="pickup_address" required rows="3"
-                                  class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm">{{ $order->origin_address }}</textarea>
+                        <textarea name="pickup_address" required rows="3" minlength="10"
+                                  class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                                  placeholder="Masukkan alamat lengkap pickup...">{{ $order->origin_address }}</textarea>
+                        <p class="text-xs text-gray-500 mt-1">Minimal 10 karakter</p>
                     </div>
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Kontak Pickup</label>
-                        <input type="text" name="pickup_contact" required value="{{ $order->customer->name ?? '' }}"
-                               class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                        <input type="text" name="pickup_contact" required minlength="2" value="{{ $order->customer->name ?? '' }}"
+                               class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                               placeholder="Nama kontak pickup">
+                        <p class="text-xs text-gray-500 mt-1">Minimal 2 karakter</p>
                     </div>
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Telepon Pickup</label>
-                        <input type="text" name="pickup_phone" required value="{{ $order->customer->phone ?? '' }}"
-                               class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                        <input type="text" name="pickup_phone" required minlength="10" value="{{ $order->customer->phone ?? '' }}"
+                               class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                               placeholder="Nomor telepon pickup">
+                        <p class="text-xs text-gray-500 mt-1">Minimal 10 digit</p>
                     </div>
 
                     <div>
@@ -508,6 +658,31 @@ function printWaybill() {
     }
 }
 
+function showPickupInfo() {
+    const modal = document.getElementById('pickup-info-modal');
+
+    // Get pickup data from order metadata
+    const pickupData = @json($order->metadata['pickup_request'] ?? null);
+
+    if (pickupData) {
+        document.getElementById('pickup-date-info').textContent = pickupData.pickup_date || 'N/A';
+        document.getElementById('pickup-time-info').textContent = pickupData.pickup_time || 'N/A';
+        document.getElementById('pickup-address-info').textContent = pickupData.pickup_address || 'N/A';
+        document.getElementById('pickup-contact-info').textContent = pickupData.pickup_contact || 'N/A';
+        document.getElementById('pickup-phone-info').textContent = pickupData.pickup_phone || 'N/A';
+
+        const status = @json($order->status) === 'picked_up' ? 'Sudah Diambil' : 'Menunggu Pickup';
+        document.getElementById('pickup-status-info').textContent = status;
+    }
+
+    modal.classList.remove('hidden');
+}
+
+function closePickupInfoModal() {
+    const modal = document.getElementById('pickup-info-modal');
+    modal.classList.add('hidden');
+}
+
 function requestPickup() {
     const modal = document.getElementById('pickup-modal');
     modal.classList.remove('hidden');
@@ -524,6 +699,42 @@ document.getElementById('pickup-form').addEventListener('submit', function(e) {
 
     const formData = new FormData(this);
     const data = Object.fromEntries(formData.entries());
+
+    // Frontend validation
+    const errors = [];
+
+    if (!data.pickup_date) {
+        errors.push('Tanggal pickup harus diisi');
+    } else {
+        const pickupDate = new Date(data.pickup_date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (pickupDate < today) {
+            errors.push('Tanggal pickup tidak boleh sebelum hari ini');
+        }
+    }
+
+    if (!data.pickup_time) {
+        errors.push('Waktu pickup harus dipilih');
+    }
+
+    if (!data.pickup_address || data.pickup_address.length < 10) {
+        errors.push('Alamat pickup minimal 10 karakter');
+    }
+
+    if (!data.pickup_contact || data.pickup_contact.length < 2) {
+        errors.push('Kontak pickup minimal 2 karakter');
+    }
+
+    if (!data.pickup_phone || data.pickup_phone.length < 10) {
+        errors.push('Telepon pickup minimal 10 digit');
+    }
+
+    if (errors.length > 0) {
+        alert('Validasi gagal:\n' + errors.join('\n'));
+        return;
+    }
 
     // Show loading state
     const submitBtn = this.querySelector('button[type="submit"]');
@@ -546,12 +757,32 @@ document.getElementById('pickup-form').addEventListener('submit', function(e) {
             if (result.data && result.data.message) {
                 message += '\n\n' + result.data.message;
             }
-            alert(message);
+
+            // Show WhatsApp notification link if available
+            if (result.whatsapp_link) {
+                message += '\n\nKirim notifikasi WhatsApp ke customer?';
+                if (confirm(message)) {
+                    window.open(result.whatsapp_link, '_blank');
+                }
+            } else {
+                alert(message);
+            }
+
             closePickupModal();
             // Reload page to show updated status
             window.location.reload();
         } else {
-            alert('Gagal meminta pickup: ' + result.message);
+            let errorMessage = 'Gagal meminta pickup: ' + result.message;
+
+            // Show detailed validation errors if available
+            if (result.errors) {
+                errorMessage += '\n\nDetail error:';
+                Object.keys(result.errors).forEach(field => {
+                    errorMessage += '\n- ' + field + ': ' + result.errors[field].join(', ');
+                });
+            }
+
+            alert(errorMessage);
         }
     })
     .catch(error => {

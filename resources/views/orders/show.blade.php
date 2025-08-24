@@ -258,6 +258,17 @@
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Aksi</h3>
                 <div class="space-y-3">
+                    @if(Auth::user()->isAdmin())
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+                        <div class="flex items-center">
+                            <i class="fas fa-info-circle text-blue-500 mr-2"></i>
+                            <p class="text-sm text-blue-700">
+                                <strong>Admin:</strong> Anda hanya dapat mengkonfirmasi pesanan dan request pickup.
+                                Status pengiriman akan diupdate oleh kurir.
+                            </p>
+                        </div>
+                    </div>
+                    @endif
                                         @if(Auth::user()->isAdmin())
                     <!-- Admin Tracking Section -->
                     <div class="border-b border-gray-200 pb-3 mb-3">
@@ -306,13 +317,8 @@
                     </button>
                     @endif
 
-                    @if(Auth::user()->isAdmin() && $order->status === 'confirmed' && !$order->courier_id)
-                    <button type="button" onclick="assignCourier()"
-                            class="w-full inline-flex items-center justify-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors">
-                        <i class="fas fa-user-plus mr-2"></i>
-                        Tugaskan Kurir
-                    </button>
-                    @endif
+                    {{-- Button Tugaskan Kurir dan Update Status dihilangkan untuk admin --}}
+                    {{-- Admin hanya bisa melakukan konfirmasi pesanan dan request pickup --}}
 
                     <a href="{{ route('complaints.create', ['order_id' => $order->id]) }}"
                        class="w-full inline-flex items-center justify-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors">
@@ -343,23 +349,55 @@
         </div>
     </div>
     @endif
+
+    {{-- Admin Status Update Modal dihilangkan --}}
+    {{-- Admin tidak lagi bisa mengupdate status secara manual --}}
 </div>
 
 @push('scripts')
 <script>
 function confirmOrder() {
     if (confirm('Apakah Anda yakin ingin mengkonfirmasi pesanan ini?')) {
-        // Add confirmation logic here
-        console.log('Confirming order...');
+        // Get CSRF token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+        fetch(`/orders/{{ $order->id }}/confirm`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                let message = 'Pesanan berhasil dikonfirmasi';
+
+                // Show WhatsApp notification link if available
+                if (data.whatsapp_link) {
+                    message += '\n\nKirim notifikasi WhatsApp ke customer?';
+                    if (confirm(message)) {
+                        window.open(data.whatsapp_link, '_blank');
+                    }
+                } else {
+                    alert(message);
+                }
+
+                // Reload page to show updated status
+                window.location.reload();
+            } else {
+                alert('Gagal mengkonfirmasi pesanan: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Terjadi kesalahan saat mengkonfirmasi pesanan');
+        });
     }
 }
 
-function assignCourier() {
-    if (confirm('Apakah Anda yakin ingin menugaskan kurir untuk pesanan ini?')) {
-        // Add courier assignment logic here
-        console.log('Assigning courier...');
-    }
-}
+// Function assignCourier dihilangkan karena admin tidak lagi bisa menugaskan kurir secara manual
 
 function generateLabel() {
     if (confirm('Apakah Anda yakin ingin generate label pengiriman?')) {
@@ -387,6 +425,8 @@ function generateLabel() {
         });
     }
 }
+
+// Admin Status Modal Functions dihilangkan karena admin tidak lagi bisa mengupdate status secara manual
 
 // Load tracking info for customer
 document.addEventListener('DOMContentLoaded', function() {

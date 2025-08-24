@@ -4,12 +4,20 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\User;
+use App\Services\OrderService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 
 class CourierController extends Controller
 {
+    private OrderService $orderService;
+
+    public function __construct(OrderService $orderService)
+    {
+        $this->orderService = $orderService;
+    }
+
     /**
      * Show courier dashboard
      */
@@ -195,36 +203,26 @@ class CourierController extends Controller
             $newStatus = $request->status;
             $notes = $request->notes;
 
-            // Update order status
-            $order->update([
-                'status' => $newStatus
-            ]);
+            // Use OrderService to update status with WhatsApp notification
+            $result = $this->orderService->updateOrderStatus($order, $newStatus, $user, $notes);
 
-            // Create status history
-            $order->statusHistory()->create([
-                'status' => $newStatus,
-                'notes' => $notes,
-                'updated_by' => $user->id
-            ]);
-
-            // Log the status update
-            \Log::info('Order status updated by courier', [
-                'order_id' => $order->id,
-                'courier_id' => $user->id,
-                'old_status' => $oldStatus,
-                'new_status' => $newStatus,
-                'notes' => $notes
-            ]);
+            if ($result['success']) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Status pesanan berhasil diupdate',
+                    'data' => [
+                        'order_id' => $order->id,
+                        'status' => $newStatus,
+                        'updated_at' => $order->updated_at->format('d M Y H:i:s')
+                    ],
+                    'whatsapp_link' => $result['whatsapp_link']
+                ]);
+            }
 
             return response()->json([
-                'success' => true,
-                'message' => 'Status pesanan berhasil diupdate',
-                'data' => [
-                    'order_id' => $order->id,
-                    'status' => $newStatus,
-                    'updated_at' => $order->updated_at->format('d M Y H:i:s')
-                ]
-            ]);
+                'success' => false,
+                'message' => 'Gagal mengupdate status pesanan'
+            ], 500);
 
         } catch (\Exception $e) {
             \Log::error('Error updating order status', [

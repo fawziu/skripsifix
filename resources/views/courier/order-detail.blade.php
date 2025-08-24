@@ -302,7 +302,18 @@ document.getElementById('status-update-form').addEventListener('submit', functio
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('Status berhasil diupdate');
+            let message = 'Status berhasil diupdate';
+
+            // Show WhatsApp notification link if available
+            if (data.whatsapp_link) {
+                message += '\n\nKirim notifikasi WhatsApp ke customer?';
+                if (confirm(message)) {
+                    window.open(data.whatsapp_link, '_blank');
+                }
+            } else {
+                alert(message);
+            }
+
             document.getElementById('status-update-form').reset();
             loadOrderDetail(); // Reload order detail
         } else {

@@ -130,11 +130,7 @@
                                 <i class="fas fa-eye mr-1"></i>
                                 Detail
                             </a>
-                            <a href="{{ route('orders.track', $order) }}"
-                               class="inline-flex items-center px-3 py-1 bg-green-600 text-white text-xs font-medium rounded hover:bg-green-700 transition-colors">
-                                <i class="fas fa-truck mr-1"></i>
-                                Update Status
-                            </a>
+
                         </div>
                     </div>
                     @endforeach

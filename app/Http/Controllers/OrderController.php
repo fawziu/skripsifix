@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\OrderService;
 use App\Services\RajaOngkirService;
 use App\Services\LocalGeographicalService;
+use App\Services\WhatsAppNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
@@ -17,12 +18,14 @@ class OrderController extends Controller
     private OrderService $orderService;
     private RajaOngkirService $rajaOngkirService;
     private LocalGeographicalService $localGeographicalService;
+    private WhatsAppNotificationService $whatsappService;
 
-    public function __construct(OrderService $orderService, RajaOngkirService $rajaOngkirService, LocalGeographicalService $localGeographicalService)
+    public function __construct(OrderService $orderService, RajaOngkirService $rajaOngkirService, LocalGeographicalService $localGeographicalService, WhatsAppNotificationService $whatsappService)
     {
         $this->orderService = $orderService;
         $this->rajaOngkirService = $rajaOngkirService;
         $this->localGeographicalService = $localGeographicalService;
+        $this->whatsappService = $whatsappService;
     }
 
     /**
@@ -286,6 +289,9 @@ class OrderController extends Controller
                             'updated_by' => $user->id,
                         ]);
 
+                        // Generate WhatsApp notification link
+                        $whatsappLink = $this->whatsappService->generateOrderConfirmationLink($order, $user);
+
                         return response()->json([
                             'success' => true,
                             'message' => 'Order confirmed and waybill generated successfully',
@@ -294,6 +300,7 @@ class OrderController extends Controller
                                 'tracking_url' => $waybillData['tracking_url'] ?? null,
                                 'label_url' => $waybillData['label_url'] ?? null,
                             ],
+                            'whatsapp_link' => $whatsappLink,
                         ]);
                     }
                 } catch (\Exception $e) {
@@ -322,9 +329,13 @@ class OrderController extends Controller
                     'updated_by' => $user->id,
                 ]);
 
+                // Generate WhatsApp notification link
+                $whatsappLink = $this->whatsappService->generateOrderConfirmationLink($order, $user);
+
                 return response()->json([
                     'success' => true,
                     'message' => 'Order confirmed for manual shipping',
+                    'whatsapp_link' => $whatsappLink,
                 ]);
             }
 
@@ -625,18 +636,19 @@ class OrderController extends Controller
                 ], 403);
             }
 
-            $success = $this->orderService->updateOrderStatus(
+            $result = $this->orderService->updateOrderStatus(
                 $order,
                 $request->status,
                 $user,
                 $request->notes
             );
 
-            if ($success) {
+            if ($result['success']) {
                 return response()->json([
                     'success' => true,
                     'message' => 'Order status updated successfully',
                     'data' => $order->load(['customer', 'courier', 'admin']),
+                    'whatsapp_link' => $result['whatsapp_link'],
                 ]);
             }
 

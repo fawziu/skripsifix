@@ -12,10 +12,12 @@ use Exception;
 class OrderService
 {
     private RajaOngkirService $rajaOngkirService;
+    private WhatsAppNotificationService $whatsappService;
 
-    public function __construct(RajaOngkirService $rajaOngkirService)
+    public function __construct(RajaOngkirService $rajaOngkirService, WhatsAppNotificationService $whatsappService)
     {
         $this->rajaOngkirService = $rajaOngkirService;
+        $this->whatsappService = $whatsappService;
     }
 
     /**
@@ -106,7 +108,7 @@ class OrderService
     /**
      * Confirm order by admin
      */
-    public function confirmOrder(Order $order, User $admin, array $data = []): bool
+    public function confirmOrder(Order $order, User $admin, array $data = []): array
     {
         DB::beginTransaction();
 
@@ -129,22 +131,32 @@ class OrderService
             // Create status update
             $this->createOrderStatus($order, 'confirmed', $admin->id, 'Order confirmed by admin');
 
+            // Generate WhatsApp notification link
+            $whatsappLink = $this->whatsappService->generateOrderConfirmationLink($order, $admin);
+
             DB::commit();
-            return true;
+
+            return [
+                'success' => true,
+                'whatsapp_link' => $whatsappLink
+            ];
         } catch (Exception $e) {
             DB::rollBack();
             Log::error('Error confirming order', [
                 'error' => $e->getMessage(),
                 'order_id' => $order->id,
             ]);
-            return false;
+            return [
+                'success' => false,
+                'whatsapp_link' => null
+            ];
         }
     }
 
     /**
      * Assign courier to order
      */
-    public function assignCourier(Order $order, User $courier, User $admin): bool
+    public function assignCourier(Order $order, User $courier, User $admin): array
     {
         DB::beginTransaction();
 
@@ -157,8 +169,15 @@ class OrderService
             // Create status update
             $this->createOrderStatus($order, 'assigned', $admin->id, "Assigned to courier: {$courier->name}");
 
+            // Generate WhatsApp notification link
+            $whatsappLink = $this->whatsappService->generateCourierAssignmentLink($order, $courier);
+
             DB::commit();
-            return true;
+
+            return [
+                'success' => true,
+                'whatsapp_link' => $whatsappLink
+            ];
         } catch (Exception $e) {
             DB::rollBack();
             Log::error('Error assigning courier', [
@@ -166,14 +185,17 @@ class OrderService
                 'order_id' => $order->id,
                 'courier_id' => $courier->id,
             ]);
-            return false;
+            return [
+                'success' => false,
+                'whatsapp_link' => null
+            ];
         }
     }
 
     /**
      * Update order status
      */
-    public function updateOrderStatus(Order $order, string $status, User $user, string $notes = null): bool
+    public function updateOrderStatus(Order $order, string $status, User $user, string $notes = null): array
     {
         DB::beginTransaction();
 
@@ -188,8 +210,15 @@ class OrderService
                 $this->generateTrackingNumber($order);
             }
 
+            // Generate WhatsApp notification link
+            $whatsappLink = $this->whatsappService->generateNotificationLink($order, $status, $user);
+
             DB::commit();
-            return true;
+
+            return [
+                'success' => true,
+                'whatsapp_link' => $whatsappLink
+            ];
         } catch (Exception $e) {
             DB::rollBack();
             Log::error('Error updating order status', [
@@ -197,7 +226,10 @@ class OrderService
                 'order_id' => $order->id,
                 'status' => $status,
             ]);
-            return false;
+            return [
+                'success' => false,
+                'whatsapp_link' => null
+            ];
         }
     }
 
