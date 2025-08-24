@@ -25,6 +25,32 @@
             @csrf
 
             <div class="space-y-6">
+                <!-- Progress Indicator -->
+                <div class="mb-6">
+                    <div class="flex items-center space-x-4">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                <i class="fas fa-box text-blue-600 text-sm"></i>
+                            </div>
+                            <span class="text-sm font-medium text-blue-900">Detail Barang</span>
+                        </div>
+                        <div class="flex-1 h-0.5 bg-gray-200"></div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                                <i class="fas fa-shipping-fast text-gray-400 text-sm"></i>
+                            </div>
+                            <span class="text-sm font-medium text-gray-500">Pengiriman</span>
+                        </div>
+                        <div class="flex-1 h-0.5 bg-gray-200"></div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                                <i class="fas fa-calculator text-gray-400 text-sm"></i>
+                            </div>
+                            <span class="text-sm font-medium text-gray-500">Biaya</span>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Item Details -->
                 <div>
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">Detail Barang</h3>
@@ -96,32 +122,99 @@
                                 Metode Pengiriman <span class="text-red-500">*</span>
                             </label>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <label class="relative flex cursor-pointer rounded-lg border border-gray-300 bg-white p-4 shadow-sm focus:outline-none">
+                                <label class="relative flex cursor-pointer rounded-lg border-2 transition-all duration-200 p-4 shadow-sm focus:outline-none"
+                                       :class="shippingMethod === 'manual' ? 'border-blue-500 bg-blue-50 shadow-md' : 'border-gray-300 bg-white hover:border-gray-400'">
                                     <input type="radio" name="shipping_method" value="manual" @change="toggleShippingMethod()" class="sr-only" required>
                                     <span class="flex flex-1">
                                         <span class="flex flex-col">
-                                            <span class="block text-sm font-medium text-gray-900">Manual</span>
-                                            <span class="mt-1 flex items-center text-sm text-gray-500">
+                                            <div class="flex items-center space-x-2">
+                                                <span class="block text-sm font-medium" :class="shippingMethod === 'manual' ? 'text-blue-900' : 'text-gray-900'">Manual</span>
+                                                <span x-show="shippingMethod === 'manual'" class="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                                                    <i class="fas fa-check mr-1"></i>Dipilih
+                                                </span>
+                                            </div>
+                                            <span class="mt-1 flex items-center text-sm" :class="shippingMethod === 'manual' ? 'text-blue-700' : 'text-gray-500'">
+                                                <i class="fas fa-truck mr-2"></i>
                                                 Pengiriman manual dengan kurir aktif
                                             </span>
                                         </span>
                                     </span>
+                                    <div class="flex-shrink-0">
+                                        <div class="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200"
+                                             :class="shippingMethod === 'manual' ? 'border-blue-500 bg-blue-500' : 'border-gray-300'">
+                                            <i x-show="shippingMethod === 'manual'" class="fas fa-check text-white text-xs"></i>
+                                        </div>
+                                    </div>
                                 </label>
-                                <label class="relative flex cursor-pointer rounded-lg border border-gray-300 bg-white p-4 shadow-sm focus:outline-none">
+                                <label class="relative flex cursor-pointer rounded-lg border-2 transition-all duration-200 p-4 shadow-sm focus:outline-none"
+                                       :class="shippingMethod === 'rajaongkir' ? 'border-green-500 bg-green-50 shadow-md' : 'border-gray-300 bg-white hover:border-gray-400'">
                                     <input type="radio" name="shipping_method" value="rajaongkir" @change="toggleShippingMethod()" class="sr-only" required>
                                     <span class="flex flex-1">
                                         <span class="flex flex-col">
-                                            <span class="block text-sm font-medium text-gray-900">RajaOngkir</span>
-                                            <span class="mt-1 flex items-center text-sm text-gray-500">
+                                            <div class="flex items-center space-x-2">
+                                                <span class="block text-sm font-medium" :class="shippingMethod === 'rajaongkir' ? 'text-green-900' : 'text-gray-900'">RajaOngkir</span>
+                                                <span x-show="shippingMethod === 'rajaongkir'" class="inline-flex items-center px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                                                    <i class="fas fa-check mr-1"></i>Dipilih
+                                                </span>
+                                            </div>
+                                            <span class="mt-1 flex items-center text-sm" :class="shippingMethod === 'rajaongkir' ? 'text-green-700' : 'text-gray-500'">
+                                                <i class="fas fa-shipping-fast mr-2"></i>
                                                 Pengiriman dengan RajaOngkir
                                             </span>
                                         </span>
                                     </span>
+                                    <div class="flex-shrink-0">
+                                        <div class="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200"
+                                             :class="shippingMethod === 'rajaongkir' ? 'border-green-500 bg-green-500' : 'border-gray-300'">
+                                            <i x-show="shippingMethod === 'rajaongkir'" class="fas fa-check text-white text-xs"></i>
+                                        </div>
+                                    </div>
                                 </label>
                             </div>
                             @error('shipping_method')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
+                        </div>
+
+                        <!-- Shipping Method Status Bar -->
+                        <div class="md:col-span-2 mb-4">
+                            <div x-show="shippingMethod === 'manual'" class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                <div class="flex items-center space-x-3">
+                                    <div class="flex-shrink-0">
+                                        <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                            <i class="fas fa-truck text-blue-600"></i>
+                                        </div>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h4 class="text-sm font-medium text-blue-900">Pengiriman Manual Aktif</h4>
+                                        <p class="text-sm text-blue-700">Pilih kurir internal untuk pengiriman manual</p>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                                            <i class="fas fa-check mr-1"></i>Manual
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div x-show="shippingMethod === 'rajaongkir'" class="bg-green-50 border border-green-200 rounded-lg p-3">
+                                <div class="flex items-center space-x-3">
+                                    <div class="flex-shrink-0">
+                                        <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                                            <i class="fas fa-shipping-fast text-green-600"></i>
+                                        </div>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h4 class="text-sm font-medium text-green-900">Pengiriman RajaOngkir Aktif</h4>
+                                        <p class="text-sm text-green-700">Pilih provinsi, kota, dan kurir untuk perhitungan ongkir</p>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                                            <i class="fas fa-check mr-1"></i>RajaOngkir
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Manual Courier Selection (Hidden by default) -->
@@ -303,6 +396,10 @@ function orderForm() {
 
         init() {
             this.updateCostSummary();
+            // Set default shipping method to manual
+            this.shippingMethod = 'manual';
+            // Trigger initial display
+            this.toggleShippingMethod();
         },
 
         toggleShippingMethod() {
