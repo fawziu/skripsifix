@@ -59,4 +59,4 @@ VITE_PUSHER_APP_CLUSTER="${PUSHER_APP_CLUSTER}"
 
 # RajaOngkir API Configuration
 RAJAONGKIR_API_KEY=1QvzAZ02e001cb86ea5ff4aaxbdqLCvf
-RAJAONGKIR_BASE_URL=https://rajaongkir.komerce.id/api/v1
+RAJAONGKIR_BASE_URL=https://rajaongkir.komerce.id/api/v2

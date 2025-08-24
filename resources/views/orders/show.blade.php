@@ -119,15 +119,19 @@
                     <div>
                         <h4 class="text-sm font-medium text-gray-600 mb-2">Alamat Asal</h4>
                         <p class="text-sm text-gray-900">{{ $order->origin_address }}</p>
-                        @if($order->origin_city)
-                            <p class="text-sm text-gray-500 mt-1">{{ $order->origin_city }}</p>
+                        @if($order->originCity)
+                            <p class="text-sm text-gray-500 mt-1">
+                                {{ $order->originCity->name }}, {{ $order->originCity->province->name }}
+                            </p>
                         @endif
                     </div>
                     <div>
                         <h4 class="text-sm font-medium text-gray-600 mb-2">Alamat Tujuan</h4>
                         <p class="text-sm text-gray-900">{{ $order->destination_address }}</p>
-                        @if($order->destination_city)
-                            <p class="text-sm text-gray-500 mt-1">{{ $order->destination_city }}</p>
+                        @if($order->destinationCity)
+                            <p class="text-sm text-gray-500 mt-1">
+                                {{ $order->destinationCity->name }}, {{ $order->destinationCity->province->name }}
+                            </p>
                         @endif
                     </div>
                 </div>
@@ -254,12 +258,28 @@
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Aksi</h3>
                 <div class="space-y-3">
-                    @if(Auth::user()->isAdmin())
-                    <a href="{{ route('orders.track', $order) }}"
-                       class="w-full inline-flex items-center justify-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors">
-                        <i class="fas fa-truck mr-2"></i>
-                        Lacak Pesanan
-                    </a>
+                                        @if(Auth::user()->isAdmin())
+                    <!-- Admin Tracking Section -->
+                    <div class="border-b border-gray-200 pb-3 mb-3">
+                        <h4 class="text-sm font-medium text-gray-700 mb-2">Tracking & Monitoring</h4>
+                        <div class="space-y-2">
+                            @if($order->shipping_method === 'rajaongkir' && $order->tracking_number)
+                            <a href="{{ route('orders.waybill', $order) }}"
+                               class="w-full inline-flex items-center justify-center px-3 py-2 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                                <i class="fas fa-receipt mr-2"></i>
+                                Lihat Waybill & Tracking
+                            </a>
+                            @endif
+
+                            @if($order->shipping_method === 'manual' || !$order->tracking_number)
+                            <button type="button" onclick="showManualTracking()"
+                                   class="w-full inline-flex items-center justify-center px-3 py-2 bg-gray-600 text-white text-xs font-medium rounded-lg hover:bg-gray-700 transition-colors">
+                                <i class="fas fa-info-circle mr-2"></i>
+                                Status Manual
+                            </button>
+                            @endif
+                        </div>
+                    </div>
                     @endif
 
                     @if(Auth::user()->isCourier() && Auth::user()->id === $order->courier_id)
@@ -303,6 +323,26 @@
             </div>
         </div>
     </div>
+
+    <!-- Admin Tracking Modal -->
+    @if(Auth::user()->isAdmin())
+    <div id="admin-tracking-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+        <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">Tracking Information</h3>
+                    <button onclick="closeAdminTrackingModal()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+
+                <div id="admin-tracking-content">
+                    <!-- Content will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
 </div>
 
 @push('scripts')
@@ -422,6 +462,248 @@ function showTrackingError(message) {
             <p class="text-sm">${message}</p>
         </div>
     `;
+}
+
+// Admin tracking functions
+function loadAdminTracking() {
+    const modal = document.getElementById('admin-tracking-modal');
+    const content = document.getElementById('admin-tracking-content');
+
+    content.innerHTML = `
+        <div class="flex items-center justify-center">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span class="ml-3 text-gray-600">Memuat informasi tracking...</span>
+        </div>
+    `;
+
+    modal.classList.remove('hidden');
+
+    // Load tracking data
+    fetch(`/api/orders/{{ $order->id }}/track`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.data) {
+            displayAdminTracking(data.data);
+        } else {
+            showAdminTrackingError(data.message || 'Gagal memuat informasi tracking');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showAdminTrackingError('Terjadi kesalahan saat memuat informasi tracking');
+    });
+}
+
+function displayAdminTracking(trackingData) {
+    const content = document.getElementById('admin-tracking-content');
+
+    let html = `
+        <div class="space-y-6">
+            <!-- Shipment Info -->
+            <div class="bg-gray-50 rounded-lg p-4">
+                <h4 class="font-medium text-gray-900 mb-3">Informasi Pengiriman</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+    `;
+
+    if (trackingData.summary) {
+        const summary = trackingData.summary;
+        html += `
+            <div><span class="font-medium">Status:</span> ${summary.status || 'N/A'}</div>
+            <div><span class="font-medium">Kurir:</span> ${summary.courier_name || 'N/A'}</div>
+            <div><span class="font-medium">Asal:</span> ${summary.origin || 'N/A'}</div>
+            <div><span class="font-medium">Tujuan:</span> ${summary.destination || 'N/A'}</div>
+            <div><span class="font-medium">Estimasi:</span> ${summary.etd || 'N/A'}</div>
+            <div><span class="font-medium">Berat:</span> ${summary.weight || 'N/A'} kg</div>
+        `;
+    }
+
+    html += `
+                </div>
+            </div>
+
+            <!-- Tracking Timeline -->
+            <div>
+                <h4 class="font-medium text-gray-900 mb-3">Timeline Pengiriman</h4>
+    `;
+
+    if (trackingData.manifest && trackingData.manifest.length > 0) {
+        html += '<div class="space-y-4">';
+        trackingData.manifest.forEach((item, index) => {
+            html += `
+                <div class="flex items-start space-x-3">
+                    <div class="flex-shrink-0">
+                        <div class="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                            <i class="fas fa-truck text-blue-600 text-xs"></i>
+                        </div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-gray-900">${item.manifest_description || 'Update Status'}</p>
+                        <div class="flex items-center space-x-4 mt-1 text-xs text-gray-500">
+                            <span><i class="fas fa-calendar mr-1"></i>${item.manifest_date || 'N/A'}</span>
+                            <span><i class="fas fa-clock mr-1"></i>${item.manifest_time || 'N/A'}</span>
+                        </div>
+                        ${item.city_name ? `<p class="text-xs text-gray-600 mt-1">${item.city_name}</p>` : ''}
+                    </div>
+                </div>
+                ${index < trackingData.manifest.length - 1 ? '<div class="ml-3 border-l-2 border-gray-200 h-4"></div>' : ''}
+            `;
+        });
+        html += '</div>';
+    } else {
+        html += `
+            <div class="text-center text-gray-500 py-4">
+                <i class="fas fa-info-circle text-2xl mb-2"></i>
+                <p>Belum ada informasi tracking yang tersedia</p>
+            </div>
+        `;
+    }
+
+    html += `
+            </div>
+        </div>
+    `;
+
+    content.innerHTML = html;
+}
+
+function showAdminTrackingError(message) {
+    const content = document.getElementById('admin-tracking-content');
+    content.innerHTML = `
+        <div class="text-center text-red-500 py-8">
+            <i class="fas fa-exclamation-triangle text-3xl mb-3"></i>
+            <p class="text-lg font-medium">${message}</p>
+        </div>
+    `;
+}
+
+function showManualTracking() {
+    const modal = document.getElementById('admin-tracking-modal');
+    const content = document.getElementById('admin-tracking-content');
+
+    const html = `
+        <div class="space-y-6">
+            <div class="text-center">
+                <i class="fas fa-truck text-blue-500 text-4xl mb-4"></i>
+                <h4 class="text-lg font-medium text-gray-900 mb-2">Status Pengiriman Manual</h4>
+                <p class="text-gray-600">Pesanan ini menggunakan metode pengiriman manual</p>
+            </div>
+
+            <!-- Order Status Timeline -->
+            <div class="bg-gray-50 rounded-lg p-4">
+                <h5 class="font-medium text-gray-900 mb-3">Status Pesanan</h5>
+                <div class="space-y-3">
+                    @php
+                        $statuses = [
+                            'pending' => ['icon' => 'clock', 'color' => 'yellow', 'label' => 'Menunggu Konfirmasi'],
+                            'confirmed' => ['icon' => 'check-circle', 'color' => 'blue', 'label' => 'Dikonfirmasi'],
+                            'assigned' => ['icon' => 'user-tie', 'color' => 'indigo', 'label' => 'Ditugaskan ke Kurir'],
+                            'picked_up' => ['icon' => 'truck', 'color' => 'purple', 'label' => 'Diambil Kurir'],
+                            'in_transit' => ['icon' => 'route', 'color' => 'orange', 'label' => 'Dalam Perjalanan'],
+                            'delivered' => ['icon' => 'check-double', 'color' => 'green', 'label' => 'Terkirim']
+                        ];
+                    @endphp
+
+                    @foreach($statuses as $status => $info)
+                        @php
+                            $isActive = $order->status === $status;
+                            $isCompleted = array_search($order->status, array_keys($statuses)) >= array_search($status, array_keys($statuses));
+                            $iconColor = $isActive ? $info['color'] : ($isCompleted ? 'green' : 'gray');
+                            $bgColor = $isActive ? $info['color'] : ($isCompleted ? 'green' : 'gray');
+                        @endphp
+
+                        <div class="flex items-center space-x-3">
+                            <div class="flex-shrink-0">
+                                <div class="w-6 h-6 bg-{{ $bgColor }}-100 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-{{ $info['icon'] }} text-{{ $iconColor }}-600 text-xs"></i>
+                                </div>
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-gray-900">{{ $info['label'] }}</p>
+                                @if($isActive)
+                                    <p class="text-xs text-{{ $bgColor }}-600 font-medium">Status Saat Ini</p>
+                                @endif
+                            </div>
+                            @if($isCompleted)
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-check text-green-500 text-xs"></i>
+                                </div>
+                            @endif
+                        </div>
+                        @if(!$loop->last)
+                            <div class="ml-3 border-l-2 border-gray-200 h-3"></div>
+                        @endif
+                    @endforeach
+                </div>
+            </div>
+
+            @if($order->courier)
+            <div class="bg-blue-50 rounded-lg p-4">
+                <h5 class="font-medium text-blue-900 mb-2">Informasi Kurir</h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="text-blue-700">Nama Kurir:</span>
+                        <p class="text-blue-900 font-medium">{{ $order->courier->name }}</p>
+                    </div>
+                    <div>
+                        <span class="text-blue-700">Status:</span>
+                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
+                            @if($order->status === 'assigned') bg-blue-100 text-blue-800
+                            @elseif($order->status === 'picked_up') bg-purple-100 text-purple-800
+                            @elseif($order->status === 'in_transit') bg-orange-100 text-orange-800
+                            @elseif($order->status === 'delivered') bg-green-100 text-green-800
+                            @else bg-gray-100 text-gray-800 @endif">
+                            {{ ucfirst(str_replace('_', ' ', $order->status)) }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            @endif
+        </div>
+    `;
+
+    content.innerHTML = html;
+    modal.classList.remove('hidden');
+}
+
+function closeAdminTrackingModal() {
+    document.getElementById('admin-tracking-modal').classList.add('hidden');
+}
+
+// Update confirmOrder function to use new API
+function confirmOrder() {
+    if (confirm('Apakah Anda yakin ingin mengkonfirmasi pesanan ini?')) {
+        fetch(`{{ route('orders.confirm', $order) }}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                if (data.data && data.data.waybill_number) {
+                    alert(`Pesanan berhasil dikonfirmasi!\n\nWaybill Number: ${data.data.waybill_number}\n\nTracking URL: ${data.data.tracking_url || 'N/A'}`);
+                } else {
+                    alert('Pesanan berhasil dikonfirmasi untuk pengiriman manual!');
+                }
+                // Reload page to show updated status
+                location.reload();
+            } else {
+                alert('Gagal mengkonfirmasi pesanan: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Terjadi kesalahan saat mengkonfirmasi pesanan');
+        });
+    }
 }
 </script>
 @endpush

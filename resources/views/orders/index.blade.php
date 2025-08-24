@@ -162,16 +162,16 @@
                                    class="text-blue-600 hover:text-blue-900 transition-colors">
                                     <i class="fas fa-eye"></i>
                                 </a>
+                                @if(Auth::user()->isAdmin() && $order->shipping_method === 'rajaongkir' && $order->tracking_number)
+                                <a href="{{ route('orders.waybill', $order) }}"
+                                   class="text-green-600 hover:text-green-900 transition-colors" title="Lihat Waybill">
+                                    <i class="fas fa-receipt"></i>
+                                </a>
+                                @endif
                                 @if(Auth::user()->isAdmin() && $order->status === 'pending')
                                 <a href="{{ route('orders.edit', $order) }}"
                                    class="text-yellow-600 hover:text-yellow-900 transition-colors">
                                     <i class="fas fa-edit"></i>
-                                </a>
-                                @endif
-                                @if(Auth::user()->isAdmin())
-                                <a href="{{ route('orders.track', $order) }}"
-                                   class="text-green-600 hover:text-green-900 transition-colors">
-                                    <i class="fas fa-truck"></i>
                                 </a>
                                 @endif
                                 @if(Auth::user()->isCourier() && Auth::user()->id === $order->courier_id)

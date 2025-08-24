@@ -7,6 +7,7 @@ use App\Http\Controllers\ComplaintController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\WaybillController;
 use Illuminate\Support\Facades\Auth; // Added this import for the debug route
 
 /*
@@ -91,7 +92,29 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
 
     // Only admin can track orders
-    Route::get('/orders/{order}/track', [OrderController::class, 'track'])->middleware('admin')->name('orders.track');
+    // Route track dihapus - fungsionalitas dipindah ke show.blade.php
+
+    // Admin order confirmation
+    Route::post('/orders/{order}/confirm', [OrderController::class, 'confirmOrder'])->name('orders.confirm');
+
+    // Admin waybill & tracking view
+    Route::get('/orders/{order}/waybill', [OrderController::class, 'waybill'])->name('orders.waybill');
+
+    // Waybill management routes
+    Route::prefix('waybill')->name('waybill.')->middleware(['auth:sanctum', 'admin'])->group(function () {
+        Route::post('/calculate', [WaybillController::class, 'calculate'])->name('calculate');
+        Route::get('/search', [WaybillController::class, 'search'])->name('search');
+        Route::post('/store', [WaybillController::class, 'store'])->name('store');
+        Route::put('/{order}/cancel', [WaybillController::class, 'cancel'])->name('cancel');
+        Route::get('/{order}/detail', [WaybillController::class, 'detail'])->name('detail');
+        Route::get('/{order}/history', [WaybillController::class, 'history'])->name('history');
+        Route::post('/{order}/pickup', [WaybillController::class, 'pickup'])->name('pickup');
+        Route::post('/{order}/print-label', [WaybillController::class, 'printLabel'])->name('print-label');
+    });
+
+
+
+
 
     // Complaints routes
     Route::get('/complaints', [ComplaintController::class, 'index'])->name('complaints.index');

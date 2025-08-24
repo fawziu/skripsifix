@@ -203,25 +203,141 @@ class OrderController extends Controller
         }
     }
 
+    // Method track dihapus - fungsionalitas dipindah ke show.blade.php
+
     /**
-     * Track order
+     * Show waybill and tracking page for admin
      */
-    public function track(Request $request, Order $order)
+    public function waybill(Request $request, Order $order)
     {
         try {
             $user = $request->user();
 
-            // Check if user has access to this order
-            if (!$user->isAdmin() && $order->customer_id !== $user->id && $order->courier_id !== $user->id) {
+            // Check if user is admin
+            if (!$user->isAdmin()) {
                 return redirect()->route('orders.index')
-                    ->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk melacak pesanan ini.');
+                    ->with('error', 'Akses ditolak. Hanya admin yang dapat mengakses halaman waybill.');
             }
 
-            return view('orders.track', compact('order'));
+            // Load necessary relationships for waybill
+            $order->load(['customer', 'courier', 'statusHistory.updatedBy', 'originCity.province', 'destinationCity.province']);
+
+            return view('orders.waybill', compact('order'));
 
         } catch (\Exception $e) {
             return redirect()->route('orders.index')
-                ->with('error', 'Gagal memuat halaman tracking. Silakan coba lagi.');
+                ->with('error', 'Gagal memuat halaman waybill. Silakan coba lagi.');
+        }
+    }
+
+    /**
+     * Confirm order and generate waybill
+     */
+    public function confirmOrder(Request $request, Order $order): JsonResponse
+    {
+        try {
+            $user = $request->user();
+
+            // Check if user is admin
+            if (!$user->isAdmin()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Access denied. Only admin can confirm orders.',
+                ], 403);
+            }
+
+            // Check if order can be confirmed
+            if ($order->status !== 'pending') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Order cannot be confirmed. Current status: ' . $order->status,
+                ], 400);
+            }
+
+            // If shipping method is RajaOngkir, generate waybill
+            if ($order->shipping_method === 'rajaongkir') {
+                try {
+                    $waybillData = $this->rajaOngkirService->createWaybill([
+                        'origin' => $order->origin_city,
+                        'destination' => $order->destination_city,
+                        'weight' => $order->item_weight,
+                        'courier' => $order->courier_service,
+                        'description' => $order->item_description,
+                        'value' => $order->item_price,
+                        'origin_address' => $order->origin_address,
+                        'destination_address' => $order->destination_address,
+                        'customer_name' => $order->customer->name,
+                        'customer_phone' => $order->customer->phone,
+                    ]);
+
+                    if ($waybillData && isset($waybillData['waybill_number'])) {
+                        $order->update([
+                            'status' => 'confirmed',
+                            'tracking_number' => $waybillData['waybill_number'],
+                            'waybill_data' => json_encode($waybillData),
+                            'confirmed_at' => now(),
+                            'confirmed_by' => $user->id,
+                        ]);
+
+                        // Create status history
+                        $order->statusHistory()->create([
+                            'status' => 'confirmed',
+                            'notes' => 'Pesanan dikonfirmasi dan waybill RajaOngkir dibuat: ' . $waybillData['waybill_number'],
+                            'updated_by' => $user->id,
+                        ]);
+
+                        return response()->json([
+                            'success' => true,
+                            'message' => 'Order confirmed and waybill generated successfully',
+                            'data' => [
+                                'waybill_number' => $waybillData['waybill_number'],
+                                'tracking_url' => $waybillData['tracking_url'] ?? null,
+                                'label_url' => $waybillData['label_url'] ?? null,
+                            ],
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Failed to generate RajaOngkir waybill', [
+                        'order_id' => $order->id,
+                        'error' => $e->getMessage(),
+                    ]);
+
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Failed to generate RajaOngkir waybill: ' . $e->getMessage(),
+                    ], 500);
+                }
+            } else {
+                // For manual shipping, just confirm the order
+                $order->update([
+                    'status' => 'confirmed',
+                    'confirmed_at' => now(),
+                    'confirmed_by' => $user->id,
+                ]);
+
+                // Create status history
+                $order->statusHistory()->create([
+                    'status' => 'confirmed',
+                    'notes' => 'Pesanan dikonfirmasi untuk pengiriman manual',
+                    'updated_by' => $user->id,
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Order confirmed for manual shipping',
+                ]);
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Failed to confirm order', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to confirm order: ' . $e->getMessage(),
+            ], 500);
         }
     }
 
@@ -246,7 +362,7 @@ class OrderController extends Controller
                     ->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk melihat pesanan ini.');
             }
 
-            $order->load(['customer', 'courier', 'admin', 'statusHistory.updatedBy']);
+            $order->load(['customer', 'courier', 'admin', 'statusHistory.updatedBy', 'originCity.province', 'destinationCity.province']);
 
             if ($request->expectsJson()) {
                 return response()->json([
@@ -419,57 +535,7 @@ class OrderController extends Controller
         }
     }
 
-    /**
-     * Confirm order (admin only)
-     */
-    public function confirmOrder(Request $request, Order $order): JsonResponse
-    {
-        $validator = Validator::make($request->all(), [
-            'tracking_number' => 'sometimes|string',
-            'courier_service' => 'sometimes|string',
-            'estimated_delivery' => 'sometimes|date',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        try {
-            $user = $request->user();
-
-            if (!$user->isAdmin()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Only admins can confirm orders',
-                ], 403);
-            }
-
-            $success = $this->orderService->confirmOrder($order, $user, $request->all());
-
-            if ($success) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Order confirmed successfully',
-                    'data' => $order->load(['customer', 'courier', 'admin']),
-                ]);
-            }
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to confirm order',
-            ], 500);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to confirm order',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
+    // Method confirmOrder lama dihapus - diganti dengan yang baru di atas
 
     /**
      * Assign courier to order (admin only)

@@ -42,7 +42,7 @@ class UserSeeder extends Seeder
                 'phone' => '081234567891',
                 'address' => 'Jl. Kurir No. 1, Makassar',
             ],
-            [Target class [courier] does not exist.
+            [
                 'name' => 'Budi Santoso',
                 'email' => 'budi@Afiyah.com',
                 'phone' => '081234567892',

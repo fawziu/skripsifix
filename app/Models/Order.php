@@ -33,11 +33,13 @@ class Order extends Model
         'status',
         'rajaongkir_response',
         'estimated_delivery',
+        'metadata',
     ];
 
     protected $casts = [
         'rajaongkir_response' => 'array',
         'estimated_delivery' => 'datetime',
+        'metadata' => 'array',
         'item_weight' => 'decimal:2',
         'item_price' => 'decimal:2',
         'service_fee' => 'decimal:2',
@@ -83,6 +85,38 @@ class Order extends Model
     public function complaints(): HasMany
     {
         return $this->hasMany(Complaint::class);
+    }
+
+    /**
+     * Get the origin city
+     */
+    public function originCity(): BelongsTo
+    {
+        return $this->belongsTo(City::class, 'origin_city');
+    }
+
+    /**
+     * Get the destination city
+     */
+    public function destinationCity(): BelongsTo
+    {
+        return $this->belongsTo(City::class, 'destination_city');
+    }
+
+    /**
+     * Get the origin province
+     */
+    public function originProvince(): BelongsTo
+    {
+        return $this->belongsTo(Province::class, 'origin_province');
+    }
+
+    /**
+     * Get the destination province
+     */
+    public function destinationProvince(): BelongsTo
+    {
+        return $this->belongsTo(Province::class, 'destination_province');
     }
 
     /**
@@ -149,7 +183,7 @@ class Order extends Model
         $prefix = 'JST';
         $date = now()->format('Ymd');
         $random = strtoupper(substr(md5(uniqid()), 0, 6));
-        
+
         return "{$prefix}{$date}{$random}";
     }
 }
