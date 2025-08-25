@@ -17,12 +17,14 @@ class CourierPricing extends Model
         'base_fee',
         'per_kg_fee',
         'is_active',
+        'bank_info',
     ];
 
     protected $casts = [
         'base_fee' => 'decimal:2',
         'per_kg_fee' => 'decimal:2',
         'is_active' => 'boolean',
+        'bank_info' => 'array',
     ];
 
     /**

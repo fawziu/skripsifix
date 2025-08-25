@@ -239,11 +239,13 @@
                         Lihat Pesanan
                     </a>
                     
+                    @if(Auth::user()->isCustomer())
                     <a href="{{ route('complaints.create') }}" 
                        class="w-full inline-flex items-center justify-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors">
                         <i class="fas fa-exclamation-triangle mr-2"></i>
                         Laporkan Masalah
                     </a>
+                    @endif
                 </div>
             </div>
 

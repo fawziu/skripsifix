@@ -217,6 +217,116 @@
                             </div>
                         </div>
 
+                        <!-- Payment Method Selection (Only for Manual Shipping) -->
+                        <div x-show="shippingMethod === 'manual'" class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Metode Pembayaran <span class="text-red-500">*</span>
+                            </label>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <label class="relative flex cursor-pointer rounded-lg border-2 transition-all duration-200 p-4 shadow-sm focus:outline-none"
+                                       :class="paymentMethod === 'cod' ? 'border-blue-500 bg-blue-50 shadow-md' : 'border-gray-300 bg-white hover:border-gray-400'">
+                                    <input type="radio" name="payment_method" value="cod" @change="togglePaymentMethod()" class="sr-only" required>
+                                    <span class="flex flex-1">
+                                        <span class="flex flex-col">
+                                            <div class="flex items-center space-x-2">
+                                                <span class="block text-sm font-medium" :class="paymentMethod === 'cod' ? 'text-blue-900' : 'text-gray-900'">COD (Cash on Delivery)</span>
+                                                <span x-show="paymentMethod === 'cod'" class="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                                                    <i class="fas fa-check mr-1"></i>Dipilih
+                                                </span>
+                                            </div>
+                                            <span class="mt-1 flex items-center text-sm" :class="paymentMethod === 'cod' ? 'text-blue-700' : 'text-gray-500'">
+                                                <i class="fas fa-money-bill-wave mr-2"></i>
+                                                Bayar saat barang diterima
+                                            </span>
+                                        </span>
+                                    </span>
+                                    <div class="flex-shrink-0">
+                                        <div class="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200"
+                                             :class="paymentMethod === 'cod' ? 'border-blue-500 bg-blue-500' : 'border-gray-300'">
+                                            <i x-show="paymentMethod === 'cod'" class="fas fa-check text-white text-xs"></i>
+                                        </div>
+                                    </div>
+                                </label>
+                                <label class="relative flex cursor-pointer rounded-lg border-2 transition-all duration-200 p-4 shadow-sm focus:outline-none"
+                                       :class="paymentMethod === 'transfer' ? 'border-green-500 bg-green-50 shadow-md' : 'border-gray-300 bg-white hover:border-gray-400'">
+                                    <input type="radio" name="payment_method" value="transfer" @change="togglePaymentMethod()" class="sr-only" required>
+                                    <span class="flex flex-1">
+                                        <span class="flex flex-col">
+                                            <div class="flex items-center space-x-2">
+                                                <span class="block text-sm font-medium" :class="paymentMethod === 'transfer' ? 'text-green-900' : 'text-gray-900'">Transfer Bank</span>
+                                                <span x-show="paymentMethod === 'transfer'" class="inline-flex items-center px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                                                    <i class="fas fa-check mr-1"></i>Dipilih
+                                                </span>
+                                            </div>
+                                            <span class="mt-1 flex items-center text-sm" :class="paymentMethod === 'transfer' ? 'text-green-700' : 'text-gray-500'">
+                                                <i class="fas fa-university mr-2"></i>
+                                                Transfer ke rekening kurir
+                                            </span>
+                                        </span>
+                                    </span>
+                                    <div class="flex-shrink-0">
+                                        <div class="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200"
+                                             :class="paymentMethod === 'transfer' ? 'border-green-500 bg-green-500' : 'border-gray-300'">
+                                            <i x-show="paymentMethod === 'transfer'" class="fas fa-check text-white text-xs"></i>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                            @error('payment_method')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <!-- Payment Method Status Bar (Only for Manual Shipping) -->
+                        <div x-show="shippingMethod === 'manual'" class="md:col-span-2 mb-4">
+                            <div x-show="paymentMethod === 'cod'" class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                <div class="flex items-center space-x-3">
+                                    <div class="flex-shrink-0">
+                                        <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                            <i class="fas fa-money-bill-wave text-blue-600"></i>
+                                        </div>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h4 class="text-sm font-medium text-blue-900">Pembayaran COD Aktif</h4>
+                                        <p class="text-sm text-blue-700">Pembayaran dilakukan saat barang diterima</p>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                                            <i class="fas fa-check mr-1"></i>COD
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div x-show="paymentMethod === 'transfer'" class="bg-green-50 border border-green-200 rounded-lg p-3">
+                                <div class="flex items-center space-x-3">
+                                    <div class="flex-shrink-0">
+                                        <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                                            <i class="fas fa-university text-green-600"></i>
+                                        </div>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h4 class="text-sm font-medium text-green-900">Pembayaran Transfer Aktif</h4>
+                                        <p class="text-sm text-green-700">Transfer ke rekening kurir sebelum pengiriman</p>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                                            <i class="fas fa-check mr-1"></i>Transfer
+                                        </span>
+                                    </div>
+                                    <!-- Show courier bank info for transfer payment -->
+                                    <div x-show="paymentMethod === 'transfer' && selectedCourierBankInfo" class="mt-3 p-3 bg-white border border-green-200 rounded-lg">
+                                        <h5 class="text-sm font-medium text-green-900 mb-2">Informasi Rekening Kurir:</h5>
+                                        <div class="text-sm text-green-700">
+                                            <p><strong>Bank:</strong> <span x-text="selectedCourierBankInfo.bank_name"></span></p>
+                                            <p><strong>No. Rek:</strong> <span x-text="selectedCourierBankInfo.account_number" class="font-mono"></span></p>
+                                            <p><strong>Atas Nama:</strong> <span x-text="selectedCourierBankInfo.account_holder"></span></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Manual Courier Selection (Hidden by default) -->
                         <div id="manual_courier_fields" class="hidden md:col-span-2">
                             <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
@@ -360,6 +470,20 @@
                                 <span id="total_cost">Rp 0</span>
                             </div>
                         </div>
+
+                        <!-- Courier Bank Info for Manual Shipping with Transfer Payment -->
+                        <div x-show="shippingMethod === 'manual' && paymentMethod === 'transfer' && selectedCourierBankInfo" class="mt-4 p-3 bg-white border border-gray-200 rounded-lg">
+                            <h4 class="text-sm font-medium text-gray-900 mb-2">Informasi Rekening Kurir:</h4>
+                            <div class="text-sm text-gray-700 space-y-1">
+                                <p><strong>Bank:</strong> <span x-text="selectedCourierBankInfo.bank_name"></span></p>
+                                <p><strong>No. Rek:</strong> <span x-text="selectedCourierBankInfo.account_number" class="font-mono"></span></p>
+                                <p><strong>Atas Nama:</strong> <span x-text="selectedCourierBankInfo.account_holder"></span></p>
+                            </div>
+                            <div class="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Lakukan transfer ke rekening di atas sebelum pengiriman
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -393,13 +517,18 @@ function orderForm() {
     return {
         selectedAddress: null,
         shippingMethod: 'manual',
+        paymentMethod: 'cod',
+        selectedCourierBankInfo: null,
 
         init() {
             this.updateCostSummary();
             // Set default shipping method to manual
             this.shippingMethod = 'manual';
+            // Set default payment method to cod
+            this.paymentMethod = 'cod';
             // Trigger initial display
             this.toggleShippingMethod();
+            this.togglePaymentMethod();
         },
 
         toggleShippingMethod() {
@@ -410,6 +539,8 @@ function orderForm() {
                 document.getElementById('rajaongkir_fields').classList.remove('hidden');
                 document.getElementById('manual_courier_fields').classList.add('hidden');
                 this.loadProvinces();
+                // Reset courier bank info for RajaOngkir
+                this.selectedCourierBankInfo = null;
             } else if (method === 'manual') {
                 document.getElementById('rajaongkir_fields').classList.add('hidden');
                 document.getElementById('manual_courier_fields').classList.remove('hidden');
@@ -417,6 +548,18 @@ function orderForm() {
             } else {
                 document.getElementById('rajaongkir_fields').classList.add('hidden');
                 document.getElementById('manual_courier_fields').classList.add('hidden');
+            }
+
+            this.updateCostSummary();
+        },
+
+        togglePaymentMethod() {
+            const method = document.querySelector('input[name="payment_method"]:checked').value;
+            this.paymentMethod = method;
+
+            // Reset courier bank info when switching to COD
+            if (method === 'cod') {
+                this.selectedCourierBankInfo = null;
             }
 
             this.updateCostSummary();
@@ -539,6 +682,8 @@ function orderForm() {
                     // Set the selected courier data
                     document.getElementById('selected_courier_id').value = courier.id;
                     document.getElementById('selected_courier_pricing_id').value = courier.pricing_id;
+                    // Set bank info for first courier
+                    this.selectedCourierBankInfo = courier.bank_info || null;
                 }
 
                 return `
@@ -547,6 +692,7 @@ function orderForm() {
                                data-pricing-id="${courier.pricing_id}"
                                data-base-fee="${courier.base_fee}"
                                data-per-kg-fee="${courier.per_kg_fee}"
+                               data-bank-info='${JSON.stringify(courier.bank_info || null)}'
                                ${isSelected ? 'checked' : ''}
                                @change="selectCourier()" class="sr-only">
                         <span class="flex flex-1">
@@ -577,6 +723,13 @@ function orderForm() {
             if (selectedCourier) {
                 document.getElementById('selected_courier_id').value = selectedCourier.value;
                 document.getElementById('selected_courier_pricing_id').value = selectedCourier.dataset.pricingId;
+
+                // Update bank info for selected courier
+                try {
+                    this.selectedCourierBankInfo = JSON.parse(selectedCourier.dataset.bankInfo);
+                } catch (e) {
+                    this.selectedCourierBankInfo = null;
+                }
 
                 // Update visual selection
                 document.querySelectorAll('input[name="selected_courier"]').forEach((radio, index) => {

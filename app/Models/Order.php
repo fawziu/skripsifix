@@ -24,6 +24,8 @@ class Order extends Model
         'shipping_cost',
         'total_amount',
         'shipping_method',
+        'payment_method',
+        'courier_bank_info',
         'origin_address',
         'destination_address',
         'origin_city',

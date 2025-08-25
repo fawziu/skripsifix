@@ -137,6 +137,44 @@
                 </div>
             </div>
 
+            <!-- Payment Details -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Detail Pembayaran</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h4 class="text-sm font-medium text-gray-600 mb-2">Metode Pembayaran</h4>
+                        <div class="flex items-center space-x-2">
+                            @if($order->payment_method === 'cod')
+                                <span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                                    <i class="fas fa-money-bill-wave mr-1"></i>COD (Cash on Delivery)
+                                </span>
+                            @else
+                                <span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                                    <i class="fas fa-university mr-1"></i>Transfer Bank
+                                </span>
+                            @endif
+                        </div>
+                        <p class="text-sm text-gray-500 mt-1">
+                            @if($order->payment_method === 'cod')
+                                Pembayaran dilakukan saat barang diterima
+                            @else
+                                Transfer ke rekening kurir sebelum pengiriman
+                            @endif
+                        </p>
+                    </div>
+                    @if($order->payment_method === 'transfer' && $order->courier && $order->courier->courierPricing && $order->courier->courierPricing->bank_info)
+                    <div>
+                        <h4 class="text-sm font-medium text-gray-600 mb-2">Informasi Rekening Kurir</h4>
+                        <div class="bg-gray-50 rounded-lg p-3">
+                            <p class="text-sm font-medium text-gray-900">{{ $order->courier->courierPricing->bank_info['bank_name'] }}</p>
+                            <p class="text-sm text-gray-600 font-mono">{{ $order->courier->courierPricing->bank_info['account_number'] }}</p>
+                            <p class="text-sm text-gray-600">{{ $order->courier->courierPricing->bank_info['account_holder'] }}</p>
+                        </div>
+                    </div>
+                    @endif
+                </div>
+            </div>
+
             <!-- Status History -->
             @if($order->statusHistory && $order->statusHistory->count() > 0)
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -320,11 +358,13 @@
                     {{-- Button Tugaskan Kurir dan Update Status dihilangkan untuk admin --}}
                     {{-- Admin hanya bisa melakukan konfirmasi pesanan dan request pickup --}}
 
+                    @if(Auth::user()->isCustomer())
                     <a href="{{ route('complaints.create', ['order_id' => $order->id]) }}"
                        class="w-full inline-flex items-center justify-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors">
                         <i class="fas fa-exclamation-triangle mr-2"></i>
                         Laporkan Masalah
                     </a>
+                    @endif
                 </div>
             </div>
         </div>

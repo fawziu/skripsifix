@@ -39,6 +39,7 @@ class OrderService
                 'shipping_cost' => $data['shipping_cost'] ?? 0,
                 'total_amount' => $data['total_cost'] ?? $this->calculateTotalAmount($data),
                 'shipping_method' => $data['shipping_method'],
+                'payment_method' => $data['payment_method'] ?? 'cod',
                 'origin_address' => $data['origin_address'],
                 'destination_address' => $data['destination_address'],
                 'origin_city' => $data['origin_city'] ?? null,

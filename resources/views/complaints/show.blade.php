@@ -12,13 +12,13 @@
                 <p class="mt-2 text-gray-600">Informasi lengkap keluhan pengiriman</p>
             </div>
             <div class="flex items-center space-x-3">
-                <a href="{{ route('complaints.index') }}" 
+                <a href="{{ route('complaints.index') }}"
                    class="inline-flex items-center px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors">
                     <i class="fas fa-arrow-left mr-2"></i>
                     Kembali
                 </a>
                 @if(Auth::user()->isAdmin() || Auth::user()->id === $complaint->user_id)
-                <a href="{{ route('complaints.edit', $complaint) }}" 
+                <a href="{{ route('complaints.edit', $complaint) }}"
                    class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
                     <i class="fas fa-edit mr-2"></i>
                     Edit
@@ -93,11 +93,11 @@
                                 <p class="font-medium text-blue-900">Order #{{ $complaint->order->id }}</p>
                                 <p class="text-sm text-blue-700">{{ $complaint->order->item_description }}</p>
                                 <p class="text-sm text-blue-600">
-                                    Status: 
+                                    Status:
                                     <span class="font-medium">{{ ucfirst($complaint->order->status) }}</span>
                                 </p>
                             </div>
-                            <a href="{{ route('orders.show', $complaint->order) }}" 
+                            <a href="{{ route('orders.show', $complaint->order) }}"
                                class="inline-flex items-center px-3 py-1 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors">
                                 <i class="fas fa-eye mr-1"></i>
                                 Lihat
@@ -305,7 +305,7 @@
             </div>
 
             <!-- Quick Actions -->
-            @if(Auth::user()->isAdmin())
+            {{-- @if(Auth::user()->isAdmin())
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h3 class="text-lg font-medium text-gray-900 mb-4">Aksi Cepat</h3>
                 <div class="space-y-3">
@@ -346,7 +346,7 @@
                     @endif
                 </div>
             </div>
-            @endif
+            @endif --}}
         </div>
     </div>
 </div>

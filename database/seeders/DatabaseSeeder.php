@@ -16,7 +16,11 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             UserSeeder::class,
             CourierPricingSeeder::class,
+            CourierBankInfoSeeder::class,
             GeographicalDataSeeder::class,
+            // AddressSeeder::class,
+            // OrderSeeder::class,
+            ComplaintSeeder::class,
         ]);
     }
 }

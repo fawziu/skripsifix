@@ -78,6 +78,7 @@ class OrderController extends Controller
             'item_weight' => 'required|numeric|min:0.1',
             'item_price' => 'required|numeric|min:0',
             'shipping_method' => 'required|in:manual,rajaongkir',
+            'payment_method' => 'required_if:shipping_method,manual|in:cod,transfer',
             'origin_address' => 'required|string',
             'destination_address_id' => 'nullable|exists:addresses,id',
             'destination_address' => 'nullable|string',
@@ -153,6 +154,7 @@ class OrderController extends Controller
                 'item_weight' => $request->item_weight,
                 'item_price' => $request->item_price,
                 'shipping_method' => $request->shipping_method,
+                'payment_method' => $request->shipping_method === 'manual' ? $request->payment_method : null,
                 'origin_address' => $request->origin_address,
                 'destination_address' => $destinationAddress ? $destinationAddress->full_address : $request->destination_address,
                 'origin_province' => $request->origin_province,
@@ -837,6 +839,7 @@ class OrderController extends Controller
                     'base_fee' => $courier->courierPricing->base_fee,
                     'per_kg_fee' => $courier->courierPricing->per_kg_fee,
                     'pricing_id' => $courier->courierPricing->id,
+                    'bank_info' => $courier->courierPricing->bank_info,
                 ];
             });
 

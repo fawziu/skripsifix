@@ -132,6 +132,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/complaints/{complaint}/edit', [ComplaintController::class, 'edit'])->name('complaints.edit');
     Route::put('/complaints/{complaint}', [ComplaintController::class, 'update'])->name('complaints.update');
 
+    // Admin complaint close route
+    Route::post('/complaints/{complaint}/close', [ComplaintController::class, 'closeComplaint'])->name('complaints.close');
+
     // Admin routes for user management
     Route::middleware('admin')->group(function () {
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
@@ -171,6 +174,13 @@ Route::middleware('auth:sanctum')->group(function () {
     // Role-specific dashboard routes
     Route::get('/admin/dashboard', [App\Http\Controllers\AdminController::class, 'dashboard'])->middleware('admin')->name('admin.dashboard');
     Route::get('/admin/dashboard/data', [App\Http\Controllers\AdminController::class, 'getDashboardData'])->middleware('admin')->name('admin.dashboard.data');
+
+    // Admin courier bank info management routes
+    Route::get('/admin/courier-bank-info', [App\Http\Controllers\AdminController::class, 'courierBankInfo'])->middleware('admin')->name('admin.courier-bank-info');
+    Route::post('/admin/courier-bank-info', [App\Http\Controllers\AdminController::class, 'storeCourierBankInfo'])->middleware('admin')->name('admin.courier-bank-info.store');
+    Route::get('/admin/courier-bank-info/{id}', [App\Http\Controllers\AdminController::class, 'showCourierBankInfo'])->middleware('admin')->name('admin.courier-bank-info.show');
+    Route::post('/admin/courier-bank-info/{id}', [App\Http\Controllers\AdminController::class, 'updateCourierBankInfo'])->middleware('admin')->name('admin.courier-bank-info.update');
+    Route::post('/admin/courier-bank-info/{id}/toggle-status', [App\Http\Controllers\AdminController::class, 'toggleCourierBankStatus'])->middleware('admin')->name('admin.courier-bank-info.toggle-status');
 
     Route::get('/courier/dashboard', [App\Http\Controllers\CourierController::class, 'dashboard'])->middleware('courier')->name('courier.dashboard');
     Route::get('/courier/dashboard/data', [App\Http\Controllers\CourierController::class, 'getDashboardData'])->middleware('courier')->name('courier.dashboard.data');

@@ -193,12 +193,10 @@
                                 </a>
                                 @endif
                                 @if(Auth::user()->isAdmin() && $complaint->status === 'resolved')
-                                <form action="{{ route('complaints.close', $complaint) }}" method="POST" style="display:inline;">
-                                    @csrf
-                                    <button type="submit" class="text-green-600 hover:text-green-900 transition-colors" title="Tutup Keluhan">
-                                        <i class="fas fa-check-double"></i>
-                                    </button>
-                                </form>
+                                <button type="button" onclick="closeComplaint({{ $complaint->id }})"
+                                        class="text-green-600 hover:text-green-900 transition-colors" title="Tutup Keluhan">
+                                    <i class="fas fa-check-double"></i>
+                                </button>
                                 @endif
                             </div>
                         </td>
@@ -209,12 +207,14 @@
                             <div class="flex flex-col items-center">
                                 <i class="fas fa-exclamation-triangle text-gray-400 text-4xl mb-4"></i>
                                 <p class="text-gray-500 text-lg font-medium">Belum ada keluhan</p>
+                                @if(Auth::user()->isCustomer())
                                 <p class="text-gray-400 text-sm mt-1">Mulai dengan melaporkan masalah</p>
                                 <a href="{{ route('complaints.create') }}"
                                    class="mt-4 inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors">
                                     <i class="fas fa-plus mr-2"></i>
                                     Laporkan Masalah Pertama
                                 </a>
+                                @endif
                             </div>
                         </td>
                     </tr>
@@ -272,8 +272,31 @@ document.getElementById('sort').addEventListener('change', function() {
 
 function closeComplaint(complaintId) {
     if (confirm('Apakah Anda yakin ingin menutup keluhan ini?')) {
-        // Add close complaint logic here
-        console.log('Closing complaint:', complaintId);
+        // Get CSRF token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+        fetch(`/complaints/${complaintId}/close`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Keluhan berhasil ditutup!');
+                // Reload page to show updated status
+                window.location.reload();
+            } else {
+                alert('Gagal menutup keluhan: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Terjadi kesalahan saat menutup keluhan');
+        });
     }
 }
 </script>

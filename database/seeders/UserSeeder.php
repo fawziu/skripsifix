@@ -43,8 +43,8 @@ class UserSeeder extends Seeder
                 'address' => 'Jl. Kurir No. 1, Makassar',
             ],
             [
-                'name' => 'Budi Santoso',
-                'email' => 'budi@Afiyah.com',
+                'name' => 'kurir',
+                'email' => 'kurir@afiyah.com',
                 'phone' => '081234567892',
                 'address' => 'Jl. Kurir No. 2, Makassar',
             ],
@@ -87,8 +87,8 @@ class UserSeeder extends Seeder
         // Create Customers
         $customers = [
             [
-                'name' => 'Fajar Ramadhan',
-                'email' => 'fajar@example.com',
+                'name' => 'member',
+                'email' => 'member@afiyah.com',
                 'phone' => '081234567896',
                 'address' => 'Jl. Customer No. 1, Makassar',
             ],

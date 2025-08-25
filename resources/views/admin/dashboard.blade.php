@@ -183,7 +183,7 @@
     <!-- Quick Actions -->
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">Aksi Cepat</h3>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <a href="{{ route('orders.index') }}"
                class="flex items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
                 <i class="fas fa-box text-blue-600 text-xl mr-3"></i>
@@ -208,6 +208,15 @@
                 <div>
                     <p class="font-medium text-green-900">Kelola Pengguna</p>
                     <p class="text-sm text-green-700">Kelola customer dan kurir</p>
+                </div>
+            </a>
+
+            <a href="{{ route('admin.courier-bank-info') }}"
+               class="flex items-center p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors">
+                <i class="fas fa-university text-purple-600 text-xl mr-3"></i>
+                <div>
+                    <p class="font-medium text-purple-900">Info Bank Kurir</p>
+                    <p class="text-sm text-purple-700">Kelola rekening bank kurir</p>
                 </div>
             </a>
         </div>

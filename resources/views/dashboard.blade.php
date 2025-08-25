@@ -88,7 +88,7 @@
             <p class="text-gray-600 mb-4">
                 Buat pesanan pengiriman baru dengan mudah
             </p>
-            <a href="{{ route('orders.create') }}" 
+            <a href="{{ route('orders.create') }}"
                class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
                 <i class="fas fa-plus mr-2"></i>
                 Buat Pesanan
@@ -104,7 +104,7 @@
             <p class="text-gray-600 mb-4">
                 Lacak status pesanan Anda secara real-time
             </p>
-            <a href="{{ route('orders.index') }}" 
+            <a href="{{ route('orders.index') }}"
                class="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors">
                 <i class="fas fa-search mr-2"></i>
                 Lacak Pesanan
@@ -112,6 +112,7 @@
         </div>
 
         <!-- Report Issue -->
+        @if(Auth::user()->isCustomer())
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-semibold text-gray-900">Laporkan Masalah</h3>
@@ -120,12 +121,13 @@
             <p class="text-gray-600 mb-4">
                 Laporkan masalah atau keluhan Anda
             </p>
-            <a href="{{ route('complaints.create') }}" 
+            <a href="{{ route('complaints.create') }}"
                class="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors">
                 <i class="fas fa-exclamation-triangle mr-2"></i>
                 Laporkan Masalah
             </a>
         </div>
+        @endif
     </div>
 
     <!-- Recent Orders -->
@@ -169,7 +171,7 @@
                             {{ Str::limit($order->item_description, 30) }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full 
+                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
                                 @if($order->status === 'pending') bg-yellow-100 text-yellow-800
                                 @elseif($order->status === 'confirmed') bg-blue-100 text-blue-800
                                 @elseif($order->status === 'in_transit') bg-purple-100 text-purple-800
@@ -243,7 +245,7 @@
                             {{ ucfirst($complaint->type) }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full 
+                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
                                 @if($complaint->status === 'open') bg-red-100 text-red-800
                                 @elseif($complaint->status === 'in_progress') bg-yellow-100 text-yellow-800
                                 @else bg-green-100 text-green-800 @endif">
