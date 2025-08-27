@@ -67,6 +67,93 @@
             </div>
         </div>
 
+        <!-- Delivery Proof Upload -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Bukti Pengiriman</h3>
+
+            <!-- Pickup Proof Upload -->
+            <div class="mb-6 p-4 border border-gray-200 rounded-lg">
+                <h4 class="text-md font-medium text-gray-900 mb-3">Bukti Pengambilan Paket</h4>
+                <div id="pickup-proof-status" class="mb-3">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+                <form id="pickup-proof-form" class="space-y-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Foto Bukti Pengambilan
+                        </label>
+                        <div class="flex items-center space-x-3">
+                            <input type="file" id="pickup_proof_photo" name="pickup_proof_photo"
+                                   accept="image/*" capture="environment"
+                                   class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                            <button type="button" onclick="openCamera('pickup_proof_photo')"
+                                    class="inline-flex items-center px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors">
+                                <i class="fas fa-camera mr-2"></i>
+                                Kamera
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">Format: JPG, PNG. Maksimal 2MB</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Catatan (Opsional)
+                        </label>
+                        <textarea id="pickup-notes" name="notes" rows="2"
+                                  class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                  placeholder="Tambahkan catatan jika diperlukan"></textarea>
+                    </div>
+                    <div class="flex justify-end">
+                        <button type="submit" id="pickup-submit-btn"
+                                class="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors">
+                            <i class="fas fa-upload mr-2"></i>
+                            Upload Bukti Pengambilan
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Delivery Proof Upload -->
+            <div class="p-4 border border-gray-200 rounded-lg">
+                <h4 class="text-md font-medium text-gray-900 mb-3">Bukti Pengiriman Paket</h4>
+                <div id="delivery-proof-status" class="mb-3">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+                <form id="delivery-proof-form" class="space-y-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Foto Bukti Pengiriman
+                        </label>
+                        <div class="flex items-center space-x-3">
+                            <input type="file" id="delivery_proof_photo" name="delivery_proof_photo"
+                                   accept="image/*" capture="environment"
+                                   class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                            <button type="button" onclick="openCamera('delivery_proof_photo')"
+                                    class="inline-flex items-center px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors">
+                                <i class="fas fa-camera mr-2"></i>
+                                Kamera
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">Format: JPG, PNG. Maksimal 2MB</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Catatan (Opsional)
+                        </label>
+                        <textarea id="delivery-notes" name="notes" rows="2"
+                                  class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                  placeholder="Tambahkan catatan jika diperlukan"></textarea>
+                    </div>
+                    <div class="flex justify-end">
+                        <button type="submit" id="delivery-submit-btn"
+                                class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                            <i class="fas fa-upload mr-2"></i>
+                            Upload Bukti Pengiriman
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <!-- Update Status -->
         <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Update Status</h3>
@@ -150,6 +237,9 @@ function displayOrderDetail(data) {
     const orderInfo = document.getElementById('order-info');
     const customerInfo = document.getElementById('customer-info');
     const statusHistory = document.getElementById('status-history');
+
+    // Update delivery proof status
+    updateDeliveryProofStatus(data.order);
 
     // Display order info
     orderInfo.innerHTML = `
@@ -325,6 +415,223 @@ document.getElementById('status-update-form').addEventListener('submit', functio
         alert('Terjadi kesalahan saat mengupdate status');
     });
 });
+
+// Handle pickup proof form submission
+document.getElementById('pickup-proof-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    uploadPickupProof();
+});
+
+// Handle delivery proof form submission
+document.getElementById('delivery-proof-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    uploadDeliveryProof();
+});
+
+// Function to update delivery proof status display
+function updateDeliveryProofStatus(order) {
+    const pickupProofStatus = document.getElementById('pickup-proof-status');
+    const deliveryProofStatus = document.getElementById('delivery-proof-status');
+    const pickupForm = document.getElementById('pickup-proof-form');
+    const deliveryForm = document.getElementById('delivery-proof-form');
+    const pickupSubmitBtn = document.getElementById('pickup-submit-btn');
+    const deliverySubmitBtn = document.getElementById('delivery-submit-btn');
+
+    // Update pickup proof status
+    if (order.pickup_proof_photo) {
+        pickupProofStatus.innerHTML = `
+            <div class="flex items-center p-3 bg-green-50 border border-green-200 rounded-lg">
+                <i class="fas fa-check-circle text-green-600 mr-3"></i>
+                <div>
+                    <p class="text-sm font-medium text-green-800">Bukti pengambilan sudah diupload</p>
+                    <p class="text-xs text-green-600">${order.pickup_proof_at || 'Waktu tidak tersedia'}</p>
+                </div>
+                <button onclick="viewProofPhoto('${order.pickup_proof_photo}', 'Bukti Pengambilan')"
+                        class="ml-auto text-green-600 hover:text-green-800">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </div>
+        `;
+        pickupForm.classList.add('hidden');
+    } else {
+        pickupProofStatus.innerHTML = `
+            <div class="flex items-center p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <i class="fas fa-exclamation-triangle text-yellow-600 mr-3"></i>
+                <p class="text-sm text-yellow-800">Belum ada bukti pengambilan paket</p>
+            </div>
+        `;
+        pickupForm.classList.remove('hidden');
+
+        // Disable form if status doesn't allow pickup proof
+        if (!['assigned', 'picked_up'].includes(order.status)) {
+            pickupSubmitBtn.disabled = true;
+            pickupSubmitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+    }
+
+    // Update delivery proof status
+    if (order.delivery_proof_photo) {
+        deliveryProofStatus.innerHTML = `
+            <div class="flex items-center p-3 bg-green-50 border border-green-200 rounded-lg">
+                <i class="fas fa-check-circle text-green-600 mr-3"></i>
+                <div>
+                    <p class="text-sm font-medium text-green-800">Bukti pengiriman sudah diupload</p>
+                    <p class="text-xs text-green-600">${order.delivery_proof_at || 'Waktu tidak tersedia'}</p>
+                </div>
+                <button onclick="viewProofPhoto('${order.delivery_proof_photo}', 'Bukti Pengiriman')"
+                        class="ml-auto text-green-600 hover:text-green-800">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </div>
+        `;
+        deliveryForm.classList.add('hidden');
+    } else {
+        deliveryProofStatus.innerHTML = `
+            <div class="flex items-center p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <i class="fas fa-exclamation-triangle text-yellow-600 mr-3"></i>
+                <p class="text-sm text-yellow-800">Belum ada bukti pengiriman paket</p>
+            </div>
+        `;
+        deliveryForm.classList.remove('hidden');
+
+        // Disable form if status doesn't allow delivery proof
+        if (!['picked_up', 'in_transit'].includes(order.status)) {
+            deliverySubmitBtn.disabled = true;
+            deliverySubmitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+    }
+}
+
+// Function to open camera
+function openCamera(inputId) {
+    const input = document.getElementById(inputId);
+    input.click();
+}
+
+// Function to view proof photo
+function viewProofPhoto(photoPath, title) {
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    modal.innerHTML = `
+        <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">${title}</h3>
+                <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="text-center">
+                <img src="/storage/${photoPath}" alt="${title}" class="max-w-full h-auto rounded-lg">
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    // Close modal when clicking outside
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+}
+
+// Function to upload pickup proof
+function uploadPickupProof() {
+    const formData = new FormData();
+    const photoFile = document.getElementById('pickup_proof_photo').files[0];
+    const notes = document.getElementById('pickup-notes').value;
+
+    if (!photoFile) {
+        alert('Pilih foto bukti pengambilan terlebih dahulu');
+        return;
+    }
+
+    formData.append('pickup_proof_photo', photoFile);
+    formData.append('notes', notes);
+
+    const submitBtn = document.getElementById('pickup-submit-btn');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Uploading...';
+
+    // Get CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    fetch(`/courier/orders/${currentOrderId}/pickup-proof`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': csrfToken,
+            'Accept': 'application/json'
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Bukti pengambilan paket berhasil diupload!');
+            document.getElementById('pickup-proof-form').reset();
+            loadOrderDetail(); // Reload order detail
+        } else {
+            alert('Gagal mengupload bukti pengambilan: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error uploading pickup proof:', error);
+        alert('Terjadi kesalahan saat mengupload bukti pengambilan');
+    })
+    .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-upload mr-2"></i>Upload Bukti Pengambilan';
+    });
+}
+
+// Function to upload delivery proof
+function uploadDeliveryProof() {
+    const formData = new FormData();
+    const photoFile = document.getElementById('delivery_proof_photo').files[0];
+    const notes = document.getElementById('delivery-notes').value;
+
+    if (!photoFile) {
+        alert('Pilih foto bukti pengiriman terlebih dahulu');
+        return;
+    }
+
+    formData.append('delivery_proof_photo', photoFile);
+    formData.append('notes', notes);
+
+    const submitBtn = document.getElementById('delivery-submit-btn');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Uploading...';
+
+    // Get CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    fetch(`/courier/orders/${currentOrderId}/delivery-proof`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': csrfToken,
+            'Accept': 'application/json'
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Bukti pengiriman paket berhasil diupload!');
+            document.getElementById('delivery-proof-form').reset();
+            loadOrderDetail(); // Reload order detail
+        } else {
+            alert('Gagal mengupload bukti pengiriman: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error uploading delivery proof:', error);
+        alert('Terjadi kesalahan saat mengupload bukti pengiriman');
+    })
+    .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-upload mr-2"></i>Upload Bukti Pengiriman';
+    });
+}
 </script>
 @endpush
 @endsection

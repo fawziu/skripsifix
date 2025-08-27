@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\OrderService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 
 class CourierController extends Controller
@@ -300,6 +301,166 @@ class CourierController extends Controller
                     })
             ]
         ]);
+    }
+
+    /**
+     * Upload pickup proof photo
+     */
+    public function uploadPickupProof(Request $request, Order $order)
+    {
+        $user = Auth::user();
+
+        // Check if courier is assigned to this order
+        if ($order->courier_id !== $user->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda tidak memiliki akses untuk mengupdate pesanan ini'
+            ], 403);
+        }
+
+        // Check if order status allows pickup proof upload
+        if (!in_array($order->status, ['assigned', 'picked_up'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Status pesanan tidak memungkinkan upload bukti pengambilan'
+            ], 400);
+        }
+
+        $request->validate([
+            'pickup_proof_photo' => 'required|image|mimes:jpeg,png,jpg|max:2048',
+            'notes' => 'nullable|string|max:500'
+        ]);
+
+        try {
+            // Handle file upload
+            if ($request->hasFile('pickup_proof_photo')) {
+                $file = $request->file('pickup_proof_photo');
+                $filename = 'pickup_proof_' . $order->id . '_' . time() . '.' . $file->getClientOriginalExtension();
+                $path = $file->storeAs('delivery_proofs', $filename, 'public');
+
+                // Update order with pickup proof
+                $order->update([
+                    'pickup_proof_photo' => $path,
+                    'pickup_proof_at' => now(),
+                    'status' => 'picked_up'
+                ]);
+
+                // Update status history
+                $order->statusHistory()->create([
+                    'status' => 'picked_up',
+                    'notes' => $request->notes ?? 'Bukti pengambilan paket berhasil diupload',
+                    'updated_by' => $user->id
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Bukti pengambilan paket berhasil diupload',
+                    'data' => [
+                        'order_id' => $order->id,
+                        'pickup_proof_photo' => $path,
+                        'pickup_proof_at' => $order->pickup_proof_at->format('d M Y H:i:s'),
+                        'status' => $order->status
+                    ]
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => 'File tidak ditemukan'
+            ], 400);
+
+        } catch (\Exception $e) {
+            \Log::error('Error uploading pickup proof', [
+                'order_id' => $order->id,
+                'courier_id' => $user->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengupload bukti pengambilan paket'
+            ], 500);
+        }
+    }
+
+    /**
+     * Upload delivery proof photo
+     */
+    public function uploadDeliveryProof(Request $request, Order $order)
+    {
+        $user = Auth::user();
+
+        // Check if courier is assigned to this order
+        if ($order->courier_id !== $user->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda tidak memiliki akses untuk mengupdate pesanan ini'
+            ], 403);
+        }
+
+        // Check if order status allows delivery proof upload
+        if (!in_array($order->status, ['picked_up', 'in_transit'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Status pesanan tidak memungkinkan upload bukti pengiriman'
+            ], 400);
+        }
+
+        $request->validate([
+            'delivery_proof_photo' => 'required|image|mimes:jpeg,png,jpg|max:2048',
+            'notes' => 'nullable|string|max:500'
+        ]);
+
+        try {
+            // Handle file upload
+            if ($request->hasFile('delivery_proof_photo')) {
+                $file = $request->file('delivery_proof_photo');
+                $filename = 'delivery_proof_' . $order->id . '_' . time() . '.' . $file->getClientOriginalExtension();
+                $path = $file->storeAs('delivery_proofs', $filename, 'public');
+
+                // Update order with delivery proof
+                $order->update([
+                    'delivery_proof_photo' => $path,
+                    'delivery_proof_at' => now(),
+                    'status' => 'delivered'
+                ]);
+
+                // Update status history
+                $order->statusHistory()->create([
+                    'status' => 'delivered',
+                    'notes' => $request->notes ?? 'Bukti pengiriman paket berhasil diupload',
+                    'updated_by' => $user->id
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Bukti pengiriman paket berhasil diupload',
+                    'data' => [
+                        'order_id' => $order->id,
+                        'delivery_proof_photo' => $path,
+                        'delivery_proof_at' => $order->delivery_proof_at->format('d M Y H:i:s'),
+                        'status' => $order->status
+                    ]
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => 'File tidak ditemukan'
+            ], 400);
+
+        } catch (\Exception $e) {
+            \Log::error('Error uploading delivery proof', [
+                'order_id' => $order->id,
+                'courier_id' => $user->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengupload bukti pengiriman paket'
+            ], 500);
+        }
     }
 }
 

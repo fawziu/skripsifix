@@ -125,12 +125,23 @@
                             </div>
                         </div>
                         <div class="ml-4 flex flex-col space-y-2">
-                            <a href="{{ route('orders.show', $order) }}"
+                            <a href="{{ route('courier.orders.show', $order) }}"
                                class="inline-flex items-center px-3 py-1 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors">
                                 <i class="fas fa-eye mr-1"></i>
                                 Detail
                             </a>
 
+                            @if($order->status === 'assigned' && !$order->pickup_proof_photo)
+                                <span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">
+                                    <i class="fas fa-camera mr-1"></i>
+                                    Perlu Bukti Pengambilan
+                                </span>
+                            @elseif($order->status === 'picked_up' && !$order->delivery_proof_photo)
+                                <span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full">
+                                    <i class="fas fa-camera mr-1"></i>
+                                    Perlu Bukti Pengiriman
+                                </span>
+                            @endif
                         </div>
                     </div>
                     @endforeach
@@ -238,14 +249,7 @@
                 </div>
             </a>
 
-            <a href="#"
-               class="flex items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
-                <i class="fas fa-route text-green-600 text-xl mr-3"></i>
-                <div>
-                    <p class="font-medium text-green-900">Rute Pengiriman</p>
-                    <p class="text-sm text-green-700">Optimalkan rute pengiriman</p>
-                </div>
-            </a>
+
 
             <a href="{{ route('complaints.index') }}"
                class="flex items-center p-4 bg-red-50 rounded-lg hover:bg-red-100 transition-colors">
@@ -365,6 +369,19 @@ function updateCurrentDeliveries(deliveries) {
                         <i class="fas fa-truck mr-1"></i>
                         Update Status
                     </a>
+
+                    ${delivery.status === 'assigned' && !delivery.pickup_proof_photo ?
+                        `<span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">
+                            <i class="fas fa-camera mr-1"></i>
+                            Perlu Bukti Pengambilan
+                        </span>` : ''
+                    }
+                    ${delivery.status === 'picked_up' && !delivery.delivery_proof_photo ?
+                        `<span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full">
+                            <i class="fas fa-camera mr-1"></i>
+                            Perlu Bukti Pengiriman
+                        </span>` : ''
+                    }
                 </div>
             </div>
         `;

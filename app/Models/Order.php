@@ -36,12 +36,18 @@ class Order extends Model
         'rajaongkir_response',
         'estimated_delivery',
         'metadata',
+        'pickup_proof_photo',
+        'delivery_proof_photo',
+        'pickup_proof_at',
+        'delivery_proof_at',
     ];
 
     protected $casts = [
         'rajaongkir_response' => 'array',
         'estimated_delivery' => 'datetime',
         'metadata' => 'array',
+        'pickup_proof_at' => 'datetime',
+        'delivery_proof_at' => 'datetime',
         'item_weight' => 'decimal:2',
         'item_price' => 'decimal:2',
         'service_fee' => 'decimal:2',
@@ -187,5 +193,37 @@ class Order extends Model
         $random = strtoupper(substr(md5(uniqid()), 0, 6));
 
         return "{$prefix}{$date}{$random}";
+    }
+
+    /**
+     * Check if order has pickup proof
+     */
+    public function hasPickupProof(): bool
+    {
+        return !empty($this->pickup_proof_photo);
+    }
+
+    /**
+     * Check if order has delivery proof
+     */
+    public function hasDeliveryProof(): bool
+    {
+        return !empty($this->delivery_proof_photo);
+    }
+
+    /**
+     * Get pickup proof photo URL
+     */
+    public function getPickupProofUrlAttribute(): ?string
+    {
+        return $this->pickup_proof_photo ? asset('storage/' . $this->pickup_proof_photo) : null;
+    }
+
+    /**
+     * Get delivery proof photo URL
+     */
+    public function getDeliveryProofUrlAttribute(): ?string
+    {
+        return $this->delivery_proof_photo ? asset('storage/' . $this->delivery_proof_photo) : null;
     }
 }

@@ -195,6 +195,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/courier/orders/{order}/api', [App\Http\Controllers\CourierController::class, 'getOrderDetails'])->middleware('courier')->name('courier.orders.api');
     Route::put('/courier/orders/{order}/status', [App\Http\Controllers\CourierController::class, 'updateOrderStatus'])->middleware('courier')->name('courier.orders.update-status');
 
+    // Courier delivery proof upload routes
+    Route::post('/courier/orders/{order}/pickup-proof', [App\Http\Controllers\CourierController::class, 'uploadPickupProof'])->middleware('courier')->name('courier.orders.upload-pickup-proof');
+    Route::post('/courier/orders/{order}/delivery-proof', [App\Http\Controllers\CourierController::class, 'uploadDeliveryProof'])->middleware('courier')->name('courier.orders.upload-delivery-proof');
+
     Route::get('/customer/dashboard', [App\Http\Controllers\CustomerController::class, 'dashboard'])->middleware('customer')->name('customer.dashboard');
     Route::get('/customer/dashboard/data', [App\Http\Controllers\CustomerController::class, 'getDashboardData'])->middleware('customer')->name('customer.dashboard.data');
 

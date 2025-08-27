@@ -137,6 +137,49 @@
                 </div>
             </div>
 
+            <!-- Delivery Proof -->
+            @if($order->pickup_proof_photo || $order->delivery_proof_photo)
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Bukti Pengiriman</h3>
+
+                @if($order->pickup_proof_photo)
+                <div class="mb-4">
+                    <h4 class="text-sm font-medium text-gray-600 mb-2">Bukti Pengambilan Paket</h4>
+                    <div class="flex items-center space-x-3">
+                        <img src="{{ asset('storage/' . $order->pickup_proof_photo) }}"
+                             alt="Bukti Pengambilan"
+                             class="w-24 h-24 object-cover rounded-lg border border-gray-200 cursor-pointer"
+                             onclick="viewProofPhoto('{{ $order->pickup_proof_photo }}', 'Bukti Pengambilan Paket')">
+                        <div>
+                            <p class="text-sm text-gray-900">Foto bukti pengambilan paket</p>
+                            @if($order->pickup_proof_at)
+                                <p class="text-xs text-gray-500">Diambil pada: {{ $order->pickup_proof_at->format('d M Y H:i') }}</p>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+                @endif
+
+                @if($order->delivery_proof_photo)
+                <div>
+                    <h4 class="text-sm font-medium text-gray-600 mb-2">Bukti Pengiriman Paket</h4>
+                    <div class="flex items-center space-x-3">
+                        <img src="{{ asset('storage/' . $order->delivery_proof_photo) }}"
+                             alt="Bukti Pengiriman"
+                             class="w-24 h-24 object-cover rounded-lg border border-gray-200 cursor-pointer"
+                             onclick="viewProofPhoto('{{ $order->delivery_proof_photo }}', 'Bukti Pengiriman Paket')">
+                        <div>
+                            <p class="text-sm text-gray-900">Foto bukti pengiriman paket</p>
+                            @if($order->delivery_proof_at)
+                                <p class="text-xs text-gray-500">Dikirim pada: {{ $order->delivery_proof_at->format('d M Y H:i') }}</p>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+                @endif
+            </div>
+            @endif
+
             <!-- Payment Details -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Detail Pembayaran</h3>
@@ -784,6 +827,33 @@ function confirmOrder() {
             alert('Terjadi kesalahan saat mengkonfirmasi pesanan');
         });
     }
+}
+
+// Function to view proof photo
+function viewProofPhoto(photoPath, title) {
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    modal.innerHTML = `
+        <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">${title}</h3>
+                <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="text-center">
+                <img src="/storage/${photoPath}" alt="${title}" class="max-w-full h-auto rounded-lg">
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    // Close modal when clicking outside
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
 }
 </script>
 @endpush
