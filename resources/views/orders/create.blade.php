@@ -21,7 +21,7 @@
 
     <!-- Order Form -->
     <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-        <form method="POST" action="{{ route('orders.store') }}" x-data="orderForm()" class="p-6">
+        <form method="POST" action="{{ route('orders.store') }}" x-data="orderForm()" x-init="init()" class="p-6">
             @csrf
 
             <div class="space-y-6">
@@ -100,6 +100,7 @@
                                     <span class="text-gray-500 text-sm">Rp</span>
                                 </div>
                                 <input type="number" id="item_price" name="item_price" min="0" required
+                                       @input="updateCostSummary()"
                                        class="w-full border border-gray-300 rounded-lg pl-12 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('item_price') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror"
                                        placeholder="100000"
                                        value="{{ old('item_price') }}">
@@ -124,7 +125,7 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <label class="relative flex cursor-pointer rounded-lg border-2 transition-all duration-200 p-4 shadow-sm focus:outline-none"
                                        :class="shippingMethod === 'manual' ? 'border-blue-500 bg-blue-50 shadow-md' : 'border-gray-300 bg-white hover:border-gray-400'">
-                                    <input type="radio" name="shipping_method" value="manual" @change="toggleShippingMethod()" class="sr-only" required>
+                                    <input type="radio" name="shipping_method" value="manual" @change="toggleShippingMethod()" :checked="shippingMethod === 'manual'" class="sr-only" required>
                                     <span class="flex flex-1">
                                         <span class="flex flex-col">
                                             <div class="flex items-center space-x-2">
@@ -148,7 +149,7 @@
                                 </label>
                                 <label class="relative flex cursor-pointer rounded-lg border-2 transition-all duration-200 p-4 shadow-sm focus:outline-none"
                                        :class="shippingMethod === 'rajaongkir' ? 'border-green-500 bg-green-50 shadow-md' : 'border-gray-300 bg-white hover:border-gray-400'">
-                                    <input type="radio" name="shipping_method" value="rajaongkir" @change="toggleShippingMethod()" class="sr-only" required>
+                                    <input type="radio" name="shipping_method" value="rajaongkir" @change="toggleShippingMethod()" :checked="shippingMethod === 'rajaongkir'" class="sr-only" required>
                                     <span class="flex flex-1">
                                         <span class="flex flex-col">
                                             <div class="flex items-center space-x-2">
@@ -225,7 +226,7 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <label class="relative flex cursor-pointer rounded-lg border-2 transition-all duration-200 p-4 shadow-sm focus:outline-none"
                                        :class="paymentMethod === 'cod' ? 'border-blue-500 bg-blue-50 shadow-md' : 'border-gray-300 bg-white hover:border-gray-400'">
-                                    <input type="radio" name="payment_method" value="cod" @change="togglePaymentMethod()" class="sr-only" required>
+                                    <input type="radio" name="payment_method" value="cod" @change="togglePaymentMethod()" :checked="paymentMethod === 'cod'" class="sr-only" :required="shippingMethod === 'manual'" :disabled="shippingMethod !== 'manual'">
                                     <span class="flex flex-1">
                                         <span class="flex flex-col">
                                             <div class="flex items-center space-x-2">
@@ -249,7 +250,7 @@
                                 </label>
                                 <label class="relative flex cursor-pointer rounded-lg border-2 transition-all duration-200 p-4 shadow-sm focus:outline-none"
                                        :class="paymentMethod === 'transfer' ? 'border-green-500 bg-green-50 shadow-md' : 'border-gray-300 bg-white hover:border-gray-400'">
-                                    <input type="radio" name="payment_method" value="transfer" @change="togglePaymentMethod()" class="sr-only" required>
+                                    <input type="radio" name="payment_method" value="transfer" @change="togglePaymentMethod()" :checked="paymentMethod === 'transfer'" class="sr-only" :required="shippingMethod === 'manual'" :disabled="shippingMethod !== 'manual'">
                                     <span class="flex flex-1">
                                         <span class="flex flex-col">
                                             <div class="flex items-center space-x-2">
@@ -318,9 +319,9 @@
                                     <div x-show="paymentMethod === 'transfer' && selectedCourierBankInfo" class="mt-3 p-3 bg-white border border-green-200 rounded-lg">
                                         <h5 class="text-sm font-medium text-green-900 mb-2">Informasi Rekening Kurir:</h5>
                                         <div class="text-sm text-green-700">
-                                            <p><strong>Bank:</strong> <span x-text="selectedCourierBankInfo.bank_name"></span></p>
-                                            <p><strong>No. Rek:</strong> <span x-text="selectedCourierBankInfo.account_number" class="font-mono"></span></p>
-                                            <p><strong>Atas Nama:</strong> <span x-text="selectedCourierBankInfo.account_holder"></span></p>
+                                            <p><strong>Bank:</strong> <span x-text="selectedCourierBankInfo ? selectedCourierBankInfo.bank_name : ''"></span></p>
+                                            <p><strong>No. Rek:</strong> <span x-text="selectedCourierBankInfo ? selectedCourierBankInfo.account_number : ''" class="font-mono"></span></p>
+                                            <p><strong>Atas Nama:</strong> <span x-text="selectedCourierBankInfo ? selectedCourierBankInfo.account_holder : ''"></span></p>
                                         </div>
                                     </div>
                                 </div>
@@ -475,9 +476,9 @@
                         <div x-show="shippingMethod === 'manual' && paymentMethod === 'transfer' && selectedCourierBankInfo" class="mt-4 p-3 bg-white border border-gray-200 rounded-lg">
                             <h4 class="text-sm font-medium text-gray-900 mb-2">Informasi Rekening Kurir:</h4>
                             <div class="text-sm text-gray-700 space-y-1">
-                                <p><strong>Bank:</strong> <span x-text="selectedCourierBankInfo.bank_name"></span></p>
-                                <p><strong>No. Rek:</strong> <span x-text="selectedCourierBankInfo.account_number" class="font-mono"></span></p>
-                                <p><strong>Atas Nama:</strong> <span x-text="selectedCourierBankInfo.account_holder"></span></p>
+                                <p><strong>Bank:</strong> <span x-text="selectedCourierBankInfo ? selectedCourierBankInfo.bank_name : ''"></span></p>
+                                <p><strong>No. Rek:</strong> <span x-text="selectedCourierBankInfo ? selectedCourierBankInfo.account_number : ''" class="font-mono"></span></p>
+                                <p><strong>Atas Nama:</strong> <span x-text="selectedCourierBankInfo ? selectedCourierBankInfo.account_holder : ''"></span></p>
                             </div>
                             <div class="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
                                 <i class="fas fa-info-circle mr-1"></i>
@@ -488,6 +489,7 @@
                 </div>
 
                 <!-- Hidden Fields for Form Submission -->
+                <input type="hidden" name="payment_method" value="" disabled>
                 <input type="hidden" id="calculated_shipping_cost" name="shipping_cost" value="0">
                 <input type="hidden" id="calculated_service_fee" name="service_fee" value="0">
                 <input type="hidden" id="calculated_total_cost" name="total_cost" value="0">
@@ -532,7 +534,8 @@ function orderForm() {
         },
 
         toggleShippingMethod() {
-            const method = document.querySelector('input[name="shipping_method"]:checked').value;
+            const checked = document.querySelector('input[name="shipping_method"]:checked');
+            const method = checked ? checked.value : (this.shippingMethod || 'manual');
             this.shippingMethod = method;
 
             if (method === 'rajaongkir') {
@@ -554,7 +557,8 @@ function orderForm() {
         },
 
         togglePaymentMethod() {
-            const method = document.querySelector('input[name="payment_method"]:checked').value;
+            const checked = document.querySelector('input[name="payment_method"]:checked');
+            const method = checked ? checked.value : (this.paymentMethod || 'cod');
             this.paymentMethod = method;
 
             // Reset courier bank info when switching to COD
@@ -702,12 +706,12 @@ function orderForm() {
                                     <i class="fas fa-phone mr-1"></i>${courier.phone || 'Tidak ada nomor telepon'}
                                 </span>
                                 <span class="mt-1 text-xs text-gray-400">
-                                    Biaya dasar: Rp${courier.base_fee.toLocaleString()} + Rp${courier.per_kg_fee.toLocaleString()}/kg
+                                    Biaya dasar: ${this.formatRupiah(courier.base_fee)} + ${this.formatRupiah(courier.per_kg_fee)}/kg
                                 </span>
                             </span>
                         </span>
                         <span class="flex flex-col items-end">
-                            <span class="text-sm font-medium text-gray-900">Rp${totalFee.toLocaleString()}</span>
+                            <span class="text-sm font-medium text-gray-900 courier-total-fee">${this.formatRupiah(totalFee)}</span>
                             ${isSelected ? '<span class="text-xs text-green-600">Terpilih</span>' : ''}
                         </span>
                     </label>
@@ -737,11 +741,13 @@ function orderForm() {
                     if (radio.checked) {
                         label.classList.remove('border-gray-300', 'bg-white');
                         label.classList.add('border-green-500', 'bg-green-50');
-                        label.querySelector('.text-xs').textContent = 'Terpilih';
+                        const tag = label.querySelector('.text-xs');
+                        if (tag) tag.textContent = 'Terpilih';
                     } else {
                         label.classList.remove('border-green-500', 'bg-green-50');
                         label.classList.add('border-gray-300', 'bg-white');
-                        label.querySelector('.text-xs').textContent = '';
+                        const tag = label.querySelector('.text-xs');
+                        if (tag) tag.textContent = '';
                     }
                 });
 
@@ -761,15 +767,20 @@ function orderForm() {
                     const totalFee = baseFee + (perKgFee * itemWeight);
 
                     // Update the fee display
-                    const feeElement = label.querySelector('.text-sm.font-medium.text-gray-900');
+                    const feeElement = label.querySelector('.courier-total-fee');
                     if (feeElement) {
-                        feeElement.textContent = `Rp${totalFee.toLocaleString()}`;
+                        feeElement.textContent = this.formatRupiah(totalFee);
                     }
                 });
 
                 // Update cost summary
                 this.updateCostSummary();
             }
+        },
+
+        formatRupiah(value) {
+            const number = Number(value) || 0;
+            return `Rp${number.toLocaleString('id-ID')}`;
         },
 
         calculateShipping() {
@@ -802,17 +813,17 @@ function orderForm() {
 
             console.log('Making API call to calculate shipping...');
 
-            // Get CSRF token
-            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            // Get CSRF token (guard if missing)
+            const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+            const csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
             console.log('CSRF Token:', csrfToken);
 
             fetch('/api/calculate-shipping', {
                 method: 'POST',
-                headers: {
+                headers: Object.assign({
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken,
                     'Accept': 'application/json'
-                },
+                }, csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {}),
                 body: JSON.stringify({
                     origin: originCity,
                     destination: destinationCity,
@@ -878,7 +889,7 @@ function orderForm() {
                     const baseFee = parseFloat(selectedCourier.dataset.baseFee) || 0;
                     const perKgFee = parseFloat(selectedCourier.dataset.perKgFee) || 0;
                     shippingCost = baseFee + (perKgFee * itemWeight);
-                    serviceFee = 3000; // Reduced service fee for manual delivery
+                    serviceFee = 5000; // Reduced service fee for manual delivery
                     courierService = 'manual';
                     courierCost = shippingCost;
                     courierEtd = '1-3 hari';
@@ -933,10 +944,10 @@ function orderForm() {
             const total = itemPrice + shippingCost + serviceFee;
 
             // Update display
-            document.getElementById('item_cost').textContent = `Rp ${itemPrice.toLocaleString()}`;
-            document.getElementById('shipping_cost').textContent = `Rp ${shippingCost.toLocaleString()}`;
-            document.getElementById('service_fee').textContent = `Rp ${serviceFee.toLocaleString()}`;
-            document.getElementById('total_cost').textContent = `Rp ${total.toLocaleString()}`;
+            document.getElementById('item_cost').textContent = `Rp ${itemPrice.toLocaleString('id-ID')}`;
+            document.getElementById('shipping_cost').textContent = `Rp ${shippingCost.toLocaleString('id-ID')}`;
+            document.getElementById('service_fee').textContent = `Rp ${serviceFee.toLocaleString('id-ID')}`;
+            document.getElementById('total_cost').textContent = `Rp ${total.toLocaleString('id-ID')}`;
 
             // Update hidden fields for form submission
             document.getElementById('calculated_shipping_cost').value = shippingCost;
@@ -992,7 +1003,7 @@ function orderForm() {
                                     <div class="text-xs text-gray-500">${option.service.toUpperCase()} - ${option.etd}</div>
                                 </div>
                                 <div class="text-right">
-                                    <div class="font-medium text-sm">Rp ${option.cost.toLocaleString()}</div>
+                                    <div class="font-medium text-sm">Rp ${option.cost.toLocaleString('id-ID')}</div>
                                     ${index === 0 ? '<div class="text-xs text-blue-600">Terpilih</div>' : ''}
                                 </div>
                             </div>

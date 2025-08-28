@@ -11,8 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('orders', function (Blueprint $table) {
-            $table->string('pickup_proof_photo')->nullable()->after('metadata');
+        $afterColumn = Schema::hasColumn('orders', 'metadata') ? 'metadata' : 'rajaongkir_response';
+
+        Schema::table('orders', function (Blueprint $table) use ($afterColumn) {
+            $table->string('pickup_proof_photo')->nullable()->after($afterColumn);
             $table->string('delivery_proof_photo')->nullable()->after('pickup_proof_photo');
             $table->timestamp('pickup_proof_at')->nullable()->after('delivery_proof_photo');
             $table->timestamp('delivery_proof_at')->nullable()->after('pickup_proof_at');
