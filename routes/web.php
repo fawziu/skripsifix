@@ -8,6 +8,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WaybillController;
+use App\Models\Order as OrderModel;
 use Illuminate\Support\Facades\Auth; // Added this import for the debug route
 
 /*
@@ -80,9 +81,9 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Admin and Courier routes
-    Route::middleware('admin.or.courier')->group(function () {
-        Route::get('/orders/{order}/edit', function ($order) {
-            return view('orders.edit', compact('order'));
+    Route::middleware('admin_or_courier')->group(function () {
+        Route::get('/orders/{order}/edit', function (OrderModel $order) {
+            return view('orders.show', compact('order'));
         })->name('orders.edit');
 
         Route::put('/orders/{order}', [OrderController::class, 'update'])->name('orders.update');

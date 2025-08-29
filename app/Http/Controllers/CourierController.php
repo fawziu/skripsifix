@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class CourierController extends Controller
 {
@@ -226,7 +227,7 @@ class CourierController extends Controller
             ], 500);
 
         } catch (\Exception $e) {
-            \Log::error('Error updating order status', [
+            Log::error('Error updating order status', [
                 'order_id' => $order->id,
                 'courier_id' => $user->id,
                 'error' => $e->getMessage()
@@ -319,7 +320,7 @@ class CourierController extends Controller
         }
 
         // Check if order status allows pickup proof upload
-        if (!in_array($order->status, ['assigned', 'picked_up'])) {
+        if (!in_array($order->status, ['confirmed', 'assigned', 'picked_up'])) {
             return response()->json([
                 'success' => false,
                 'message' => 'Status pesanan tidak memungkinkan upload bukti pengambilan'
@@ -370,7 +371,7 @@ class CourierController extends Controller
             ], 400);
 
         } catch (\Exception $e) {
-            \Log::error('Error uploading pickup proof', [
+            Log::error('Error uploading pickup proof', [
                 'order_id' => $order->id,
                 'courier_id' => $user->id,
                 'error' => $e->getMessage()
@@ -399,7 +400,7 @@ class CourierController extends Controller
         }
 
         // Check if order status allows delivery proof upload
-        if (!in_array($order->status, ['picked_up', 'in_transit'])) {
+        if (!in_array($order->status, ['assigned', 'picked_up', 'in_transit'])) {
             return response()->json([
                 'success' => false,
                 'message' => 'Status pesanan tidak memungkinkan upload bukti pengiriman'
@@ -450,7 +451,7 @@ class CourierController extends Controller
             ], 400);
 
         } catch (\Exception $e) {
-            \Log::error('Error uploading delivery proof', [
+            Log::error('Error uploading delivery proof', [
                 'order_id' => $order->id,
                 'courier_id' => $user->id,
                 'error' => $e->getMessage()

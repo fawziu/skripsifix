@@ -78,7 +78,7 @@ class OrderSeeder extends Seeder
                 $itemWeight = rand(1, 50) / 10; // 0.1 to 5.0 kg
                 $itemPrice = rand(50000, 2000000); // 50k to 2M
                 $shippingCost = $this->calculateShippingCost($itemWeight, $shippingMethod);
-                $serviceFee = $shippingMethod === 'manual' ? 3000 : 5000;
+                $serviceFee = $shippingMethod === 'manual' ? 5000 : 5000;
                 $totalAmount = $itemPrice + $shippingCost + $serviceFee;
 
                 // Determine status and assign courier/admin accordingly

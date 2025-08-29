@@ -288,7 +288,15 @@ function displayOrderDetail(data) {
             </div>
             <div>
                 <span class="text-sm font-medium text-gray-600">Phone:</span>
-                <p class="text-sm text-gray-900 mt-1">${data.customer.phone || 'Tidak tersedia'}</p>
+                <div class="mt-1 flex items-center space-x-2">
+                    <p class="text-sm text-gray-900">${data.customer.phone || 'Tidak tersedia'}</p>
+                    ${data.customer.phone ? `
+                        <a href="#" onclick="openWhatsAppChat('${data.customer.phone}', '${data.order.order_number}')"
+                           class="inline-flex items-center px-2 py-1 bg-green-600 text-white text-xs font-medium rounded hover:bg-green-700">
+                            <i class="fab fa-whatsapp mr-1"></i> Chat
+                        </a>
+                    ` : ''}
+                </div>
             </div>
             <div>
                 <span class="text-sm font-medium text-gray-600">Email:</span>
@@ -463,7 +471,7 @@ function updateDeliveryProofStatus(order) {
         pickupForm.classList.remove('hidden');
 
         // Disable form if status doesn't allow pickup proof
-        if (!['assigned', 'picked_up'].includes(order.status)) {
+        if (!['confirmed', 'assigned', 'picked_up'].includes(order.status)) {
             pickupSubmitBtn.disabled = true;
             pickupSubmitBtn.classList.add('opacity-50', 'cursor-not-allowed');
         }
@@ -495,7 +503,7 @@ function updateDeliveryProofStatus(order) {
         deliveryForm.classList.remove('hidden');
 
         // Disable form if status doesn't allow delivery proof
-        if (!['picked_up', 'in_transit'].includes(order.status)) {
+        if (!['assigned', 'picked_up', 'in_transit'].includes(order.status)) {
             deliverySubmitBtn.disabled = true;
             deliverySubmitBtn.classList.add('opacity-50', 'cursor-not-allowed');
         }
@@ -533,6 +541,22 @@ function viewProofPhoto(photoPath, title) {
             modal.remove();
         }
     });
+}
+
+// Normalize Indonesian phone numbers and open wa.me link
+function openWhatsAppChat(rawPhone, orderNumber) {
+    if (!rawPhone) return;
+    let phone = String(rawPhone).replace(/[^0-9+]/g, '');
+    // Convert leading 0 to 62, or ensure starts with 62 for ID numbers
+    if (phone.startsWith('0')) {
+        phone = '62' + phone.slice(1);
+    } else if (phone.startsWith('+')) {
+        phone = phone.slice(1);
+    }
+
+    const text = encodeURIComponent(`Halo, ini kurir untuk pesanan ${orderNumber}.`);
+    const url = `https://wa.me/${phone}?text=${text}`;
+    window.open(url, '_blank');
 }
 
 // Function to upload pickup proof
