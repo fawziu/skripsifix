@@ -39,6 +39,11 @@ class UpdatePickupStatus extends Command
     {
         $this->info('Checking for pickup status updates...');
 
+        // Log current timezone information for debugging
+        $currentTime = Carbon::now('Asia/Makassar');
+        $this->info("Current WITA time: " . $currentTime->format('Y-m-d H:i:s T'));
+        $this->info("Server timezone: " . date_default_timezone_get());
+
         // Get orders with pickup requests that are due
         $orders = Order::where('status', 'confirmed')
             ->whereNotNull('metadata->pickup_request')
@@ -86,12 +91,24 @@ class UpdatePickupStatus extends Command
         $startTime = $timeRange[0];
         $endTime = $timeRange[1];
 
-        // Create datetime objects
-        $pickupDateTime = Carbon::parse($pickupDate . ' ' . $startTime);
-        $currentDateTime = Carbon::now();
+        // Create datetime objects with explicit WITA timezone
+        $pickupDateTime = Carbon::parse($pickupDate . ' ' . $startTime, 'Asia/Makassar');
+        $currentDateTime = Carbon::now('Asia/Makassar');
 
         // Check if current time is within pickup window (with 3 minutes buffer)
-        $pickupEndTime = Carbon::parse($pickupDate . ' ' . $endTime);
+        $pickupEndTime = Carbon::parse($pickupDate . ' ' . $endTime, 'Asia/Makassar');
+
+        // Log time comparison details for debugging
+        Log::info('Pickup time check', [
+            'pickup_date' => $pickupDate,
+            'pickup_time' => $pickupTime,
+            'start_time' => $startTime,
+            'end_time' => $endTime,
+            'pickup_start_datetime' => $pickupDateTime->format('Y-m-d H:i:s T'),
+            'pickup_end_datetime' => $pickupEndTime->format('Y-m-d H:i:s T'),
+            'current_datetime' => $currentDateTime->format('Y-m-d H:i:s T'),
+            'is_due' => $currentDateTime->between($pickupDateTime->subMinutes(3), $pickupEndTime->addMinutes(3))
+        ]);
 
         return $currentDateTime->between($pickupDateTime->subMinutes(3), $pickupEndTime->addMinutes(3));
     }
