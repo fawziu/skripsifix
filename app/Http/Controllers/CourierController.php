@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\User;
+use App\Models\CourierPricing;
 use App\Services\OrderService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -460,6 +461,210 @@ class CourierController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal mengupload bukti pengiriman paket'
+            ], 500);
+        }
+    }
+
+    /**
+     * Show courier pricing management page
+     */
+    public function pricing()
+    {
+        $user = Auth::user();
+
+        // Get or create pricing for this courier
+        $pricing = CourierPricing::where('courier_id', $user->id)->first();
+
+        return view('courier.courier-pricing', compact('pricing'));
+    }
+
+    /**
+     * Store courier pricing
+     */
+    public function storePricing(Request $request)
+    {
+        $user = Auth::user();
+
+        $request->validate([
+            'base_fee' => 'required|numeric|min:0',
+            'per_kg_fee' => 'required|numeric|min:0',
+            'is_active' => 'boolean'
+        ]);
+
+        try {
+            // Check if pricing already exists
+            $existingPricing = CourierPricing::where('courier_id', $user->id)->first();
+
+            if ($existingPricing) {
+                return redirect()->back()->with('error', 'Harga pengiriman sudah ada. Gunakan fitur update untuk mengubah harga.');
+            }
+
+            // Create new pricing
+            $pricing = CourierPricing::create([
+                'courier_id' => $user->id,
+                'base_fee' => $request->base_fee,
+                'per_kg_fee' => $request->per_kg_fee,
+                'is_active' => $request->has('is_active') ? true : false
+            ]);
+
+            Log::info('Courier pricing created', [
+                'courier_id' => $user->id,
+                'pricing_id' => $pricing->id,
+                'base_fee' => $pricing->base_fee,
+                'per_kg_fee' => $pricing->per_kg_fee
+            ]);
+
+            return redirect()->back()->with('success', 'Harga pengiriman berhasil disimpan!');
+
+        } catch (\Exception $e) {
+            Log::error('Error creating courier pricing', [
+                'courier_id' => $user->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return redirect()->back()->with('error', 'Gagal menyimpan harga pengiriman. Silakan coba lagi.');
+        }
+    }
+
+    /**
+     * Update courier pricing
+     */
+    public function updatePricing(Request $request)
+    {
+        $user = Auth::user();
+
+        $request->validate([
+            'base_fee' => 'required|numeric|min:0',
+            'per_kg_fee' => 'required|numeric|min:0',
+            'is_active' => 'boolean'
+        ]);
+
+        try {
+            $pricing = CourierPricing::where('courier_id', $user->id)->first();
+
+            if (!$pricing) {
+                return redirect()->back()->with('error', 'Harga pengiriman tidak ditemukan.');
+            }
+
+            // Update pricing
+            $pricing->update([
+                'base_fee' => $request->base_fee,
+                'per_kg_fee' => $request->per_kg_fee,
+                'is_active' => $request->has('is_active') ? true : false
+            ]);
+
+            Log::info('Courier pricing updated', [
+                'courier_id' => $user->id,
+                'pricing_id' => $pricing->id,
+                'base_fee' => $pricing->base_fee,
+                'per_kg_fee' => $pricing->per_kg_fee
+            ]);
+
+            return redirect()->back()->with('success', 'Harga pengiriman berhasil diupdate!');
+
+        } catch (\Exception $e) {
+            Log::error('Error updating courier pricing', [
+                'courier_id' => $user->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return redirect()->back()->with('error', 'Gagal mengupdate harga pengiriman. Silakan coba lagi.');
+        }
+    }
+
+    /**
+     * Get courier pricing data via API
+     */
+    public function getPricingData()
+    {
+        $user = Auth::user();
+
+        try {
+            $pricing = CourierPricing::where('courier_id', $user->id)->first();
+
+            if (!$pricing) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Harga pengiriman belum diatur'
+                ], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $pricing->id,
+                    'base_fee' => $pricing->base_fee,
+                    'per_kg_fee' => $pricing->per_kg_fee,
+                    'is_active' => $pricing->is_active,
+                    'created_at' => $pricing->created_at->format('d M Y H:i'),
+                    'updated_at' => $pricing->updated_at->format('d M Y H:i')
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error getting courier pricing data', [
+                'courier_id' => $user->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengambil data harga pengiriman'
+            ], 500);
+        }
+    }
+
+    /**
+     * Calculate delivery fee based on weight
+     */
+    public function calculateFee(Request $request)
+    {
+        $user = Auth::user();
+
+        $request->validate([
+            'weight' => 'required|numeric|min:0.1'
+        ]);
+
+        try {
+            $pricing = CourierPricing::where('courier_id', $user->id)
+                ->where('is_active', true)
+                ->first();
+
+            if (!$pricing) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Harga pengiriman tidak ditemukan atau tidak aktif'
+                ], 404);
+            }
+
+            $weight = $request->weight;
+            $totalFee = $pricing->calculateFee($weight);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'weight' => $weight,
+                    'base_fee' => $pricing->base_fee,
+                    'per_kg_fee' => $pricing->per_kg_fee,
+                    'total_fee' => $totalFee,
+                    'breakdown' => [
+                        'base' => $pricing->base_fee,
+                        'weight_cost' => $pricing->per_kg_fee * $weight,
+                        'total' => $totalFee
+                    ]
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error calculating delivery fee', [
+                'courier_id' => $user->id,
+                'weight' => $request->weight,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghitung biaya pengiriman'
             ], 500);
         }
     }

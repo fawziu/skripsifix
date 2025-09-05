@@ -17,6 +17,11 @@
                     <i class="fas fa-list mr-2"></i>
                     Kelola Pesanan
                 </a>
+                <a href="{{ route('courier.pricing') }}"
+                   class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                    <i class="fas fa-dollar-sign mr-2"></i>
+                    Kelola Harga
+                </a>
                 <div class="flex items-center space-x-2">
                     <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
                     <span class="text-sm text-gray-600">Real-time aktif</span>
@@ -246,6 +251,15 @@
                 <div>
                     <p class="font-medium text-blue-900">Kelola Pesanan</p>
                     <p class="text-sm text-blue-700">Lihat dan update pesanan yang ditugaskan</p>
+                </div>
+            </a>
+
+            <a href="{{ route('courier.pricing') }}"
+               class="flex items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
+                <i class="fas fa-dollar-sign text-green-600 text-xl mr-3"></i>
+                <div>
+                    <p class="font-medium text-green-900">Kelola Harga</p>
+                    <p class="text-sm text-green-700">Atur harga pengiriman Anda</p>
                 </div>
             </a>
 

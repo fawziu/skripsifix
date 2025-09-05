@@ -200,6 +200,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/courier/orders/{order}/pickup-proof', [App\Http\Controllers\CourierController::class, 'uploadPickupProof'])->middleware('courier')->name('courier.orders.upload-pickup-proof');
     Route::post('/courier/orders/{order}/delivery-proof', [App\Http\Controllers\CourierController::class, 'uploadDeliveryProof'])->middleware('courier')->name('courier.orders.upload-delivery-proof');
 
+    // Courier pricing management routes
+    Route::get('/courier/pricing', [App\Http\Controllers\CourierController::class, 'pricing'])->middleware('courier')->name('courier.pricing');
+    Route::post('/courier/pricing', [App\Http\Controllers\CourierController::class, 'storePricing'])->middleware('courier')->name('courier.pricing.store');
+    Route::put('/courier/pricing', [App\Http\Controllers\CourierController::class, 'updatePricing'])->middleware('courier')->name('courier.pricing.update');
+    Route::get('/courier/pricing/data', [App\Http\Controllers\CourierController::class, 'getPricingData'])->middleware('courier')->name('courier.pricing.data');
+    Route::post('/courier/pricing/calculate', [App\Http\Controllers\CourierController::class, 'calculateFee'])->middleware('courier')->name('courier.pricing.calculate');
+
     Route::get('/customer/dashboard', [App\Http\Controllers\CustomerController::class, 'dashboard'])->middleware('customer')->name('customer.dashboard');
     Route::get('/customer/dashboard/data', [App\Http\Controllers\CustomerController::class, 'getDashboardData'])->middleware('customer')->name('customer.dashboard.data');
 
