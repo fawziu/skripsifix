@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use App\Models\Order;
+use App\Models\User;
 use App\Services\WhatsAppNotificationService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -15,7 +16,7 @@ class UpdatePickupStatus extends Command
      *
      * @var string
      */
-    protected $signature = 'pickup:update-status';
+    protected $signature = 'pickup:update-status {--now=} {--dry-run}';
 
     /**
      * The console command description.
@@ -25,6 +26,8 @@ class UpdatePickupStatus extends Command
     protected $description = 'Update pickup status automatically based on scheduled pickup time';
 
     private WhatsAppNotificationService $whatsappService;
+    private string $timezone = 'Asia/Makassar';
+    private ?Carbon $overrideNow = null;
 
     public function __construct(WhatsAppNotificationService $whatsappService)
     {
@@ -39,15 +42,24 @@ class UpdatePickupStatus extends Command
     {
         $this->info('Checking for pickup status updates...');
 
-        // Log current timezone information for debugging
-        $currentTime = Carbon::now('Asia/Makassar');
-        $this->info("Current WITA time: " . $currentTime->format('Y-m-d H:i:s T'));
-        $this->info("Server timezone: " . date_default_timezone_get());
+        // Optionally override current time for testing (expects 'Y-m-d H:i' or 'Y-m-d H:i:s' in WITA)
+        $nowOption = $this->option('now');
+        if (!empty($nowOption)) {
+            try {
+                $this->overrideNow = Carbon::parse($nowOption, $this->timezone);
+                $this->info('Using overridden current time (WITA): ' . $this->overrideNow->toDateTimeString());
+            } catch (\Throwable $e) {
+                $this->error('Invalid --now format. Use "Y-m-d H:i" or "Y-m-d H:i:s" (WITA).');
+                return 1;
+            }
+        }
 
-        // Get orders with pickup requests that are due
+        // Get candidate orders; avoid DB-specific JSON path filter for portability
         $orders = Order::where('status', 'confirmed')
-            ->whereNotNull('metadata->pickup_request')
+            ->whereNotNull('metadata')
             ->get();
+
+        $this->line('Candidates (confirmed with metadata): ' . $orders->count());
 
         $updatedCount = 0;
 
@@ -58,10 +70,42 @@ class UpdatePickupStatus extends Command
                 continue;
             }
 
-            // Check if pickup time has arrived
-            if ($this->isPickupTimeDue($pickupData)) {
-                $this->updateOrderToPickedUp($order, $pickupData);
-                $updatedCount++;
+            // Parse window
+            [$startAt, $endAt] = $this->parsePickupWindow($pickupData);
+            if ($startAt === null || $endAt === null) {
+                $this->line("Order #{$order->order_number}: invalid pickup window format: " . ($pickupData['pickup_time'] ?? ''));
+                continue;
+            }
+
+            $now = $this->overrideNow ?? Carbon::now($this->timezone);
+
+            // Buffer window
+            $bufferedStart = $startAt->copy()->subMinutes(3);
+            $bufferedEnd = $endAt->copy()->addMinutes(3);
+
+            // Consider due once the window has started (>= start with buffer)
+            $due = $now->greaterThanOrEqualTo($bufferedStart);
+
+            $this->line(
+                sprintf(
+                    'Order #%s: date=%s time=%s | window=%s..%s | now=%s | due(started?)=%s',
+                    $order->order_number,
+                    $pickupData['pickup_date'] ?? '-',
+                    $pickupData['pickup_time'] ?? '-',
+                    $bufferedStart->toDateTimeString(),
+                    $bufferedEnd->toDateTimeString(),
+                    $now->toDateTimeString(),
+                    $due ? 'yes' : 'no'
+                )
+            );
+
+            if ($due) {
+                if ($this->option('dry-run')) {
+                    $this->line("DRY-RUN: would update order #{$order->order_number} to picked_up");
+                } else {
+                    $this->updateOrderToPickedUp($order, $pickupData);
+                    $updatedCount++;
+                }
             }
         }
 
@@ -80,37 +124,101 @@ class UpdatePickupStatus extends Command
         }
 
         $pickupDate = $pickupData['pickup_date'];
-        $pickupTime = $pickupData['pickup_time'];
+        $pickupTime = (string) $pickupData['pickup_time'];
 
-        // Parse pickup time range (e.g., "08:00-10:00")
-        $timeRange = explode('-', $pickupTime);
-        if (count($timeRange) !== 2) {
+        // Parse pickup time range (tolerant): supports "08:00-10:00", "08:00 - 10:00", "08.00 - 10.00", en/em dashes
+        $timeRange = preg_split('/\s*[-–—]\s*/', trim($pickupTime));
+        if (!$timeRange || count($timeRange) !== 2) {
             return false;
         }
 
-        $startTime = $timeRange[0];
-        $endTime = $timeRange[1];
+        // Extract time tokens and normalize dot to colon
+        $extractTime = function (string $raw): ?string {
+            $raw = trim($raw);
+            if (preg_match('/(\d{1,2}[:\.]\d{2}(?::\d{2})?)/', $raw, $matches)) {
+                $candidate = $matches[1];
+                return str_replace('.', ':', $candidate);
+            }
+            return null;
+        };
 
-        // Create datetime objects with explicit WITA timezone
-        $pickupDateTime = Carbon::parse($pickupDate . ' ' . $startTime, 'Asia/Makassar');
-        $currentDateTime = Carbon::now('Asia/Makassar');
+        $startTimeStr = $extractTime($timeRange[0]);
+        $endTimeStr = $extractTime($timeRange[1]);
+        if ($startTimeStr === null || $endTimeStr === null) {
+            return false;
+        }
+
+        // Create datetime objects
+        $parseWithFormats = function (string $date, string $time, string $tz): ?Carbon {
+            $candidates = [
+                'Y-m-d H:i',
+                'Y-m-d H:i:s',
+            ];
+            foreach ($candidates as $format) {
+                try {
+                    $dt = Carbon::createFromFormat($format, $date . ' ' . $time, $tz);
+                    if ($dt !== false) {
+                        return $dt;
+                    }
+                } catch (\Throwable $e) {
+                    // try next
+                }
+            }
+            return null;
+        };
+
+        $pickupDateTime = $parseWithFormats($pickupDate, $startTimeStr, $this->timezone);
+        $pickupEndTime = $parseWithFormats($pickupDate, $endTimeStr, $this->timezone);
+        if ($pickupDateTime === null || $pickupEndTime === null) {
+            return false;
+        }
+
+        $currentDateTime = $this->overrideNow ?? Carbon::now($this->timezone);
 
         // Check if current time is within pickup window (with 3 minutes buffer)
-        $pickupEndTime = Carbon::parse($pickupDate . ' ' . $endTime, 'Asia/Makassar');
+        return $currentDateTime->between($pickupDateTime->copy()->subMinutes(3), $pickupEndTime->copy()->addMinutes(3));
+    }
 
-        // Log time comparison details for debugging
-        Log::info('Pickup time check', [
-            'pickup_date' => $pickupDate,
-            'pickup_time' => $pickupTime,
-            'start_time' => $startTime,
-            'end_time' => $endTime,
-            'pickup_start_datetime' => $pickupDateTime->format('Y-m-d H:i:s T'),
-            'pickup_end_datetime' => $pickupEndTime->format('Y-m-d H:i:s T'),
-            'current_datetime' => $currentDateTime->format('Y-m-d H:i:s T'),
-            'is_due' => $currentDateTime->between($pickupDateTime->subMinutes(3), $pickupEndTime->addMinutes(3))
-        ]);
+    /**
+     * Parse pickup window start/end in WITA. Returns [Carbon|null, Carbon|null]
+     */
+    private function parsePickupWindow(array $pickupData): array
+    {
+        if (!isset($pickupData['pickup_date']) || !isset($pickupData['pickup_time'])) {
+            return [null, null];
+        }
 
-        return $currentDateTime->between($pickupDateTime->subMinutes(3), $pickupEndTime->addMinutes(3));
+        $pickupDate = $pickupData['pickup_date'];
+        $pickupTime = (string) $pickupData['pickup_time'];
+
+        $timeRange = preg_split('/\s*[-–—]\s*/', trim($pickupTime));
+        if (!$timeRange || count($timeRange) !== 2) {
+            return [null, null];
+        }
+
+        $extractTime = function (string $raw): ?string {
+            $raw = trim($raw);
+            if (preg_match('/(\d{1,2}[:\.]\d{2}(?::\d{2})?)/', $raw, $matches)) {
+                $candidate = $matches[1];
+                return str_replace('.', ':', $candidate);
+            }
+            return null;
+        };
+
+        $startTimeStr = $extractTime($timeRange[0]);
+        $endTimeStr = $extractTime($timeRange[1]);
+        if ($startTimeStr === null || $endTimeStr === null) {
+            return [null, null];
+        }
+
+        try {
+            $start = Carbon::parse($pickupDate . ' ' . $startTimeStr, $this->timezone);
+            $end = Carbon::parse($pickupDate . ' ' . $endTimeStr, $this->timezone);
+        } catch (\Throwable $e) {
+            return [null, null];
+        }
+
+        return [$start, $end];
     }
 
     /**
@@ -133,11 +241,9 @@ class UpdatePickupStatus extends Command
             ]);
 
             // Generate WhatsApp notification
-            $whatsappLink = $this->whatsappService->generateStatusNotificationLink(
-                $order,
-                'picked_up',
-                (object) ['name' => 'System']
-            );
+            // Resolve a valid user model to attribute the notification
+            $triggerUser = User::find(1) ?? $order->admin ?? $order->customer;
+            $whatsappLink = $this->whatsappService->generateStatusNotificationLink($order, 'picked_up', $triggerUser);
 
             // Log the update
             Log::info('Automatic pickup status update', [
