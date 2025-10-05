@@ -42,6 +42,7 @@
                         @elseif($order->status === 'picked_up') bg-purple-100 text-purple-800
                         @elseif($order->status === 'in_transit') bg-orange-100 text-orange-800
                         @elseif($order->status === 'delivered') bg-green-100 text-green-800
+                        @elseif($order->status === 'awaiting_confirmation') bg-yellow-100 text-yellow-800
                         @else bg-red-100 text-red-800 @endif">
                         {{ ucfirst(str_replace('_', ' ', $order->status)) }}
                     </span>
@@ -56,6 +57,7 @@
                             'assigned' => ['icon' => 'user', 'title' => 'Assigned', 'description' => 'Kurir telah ditugaskan'],
                             'picked_up' => ['icon' => 'truck', 'title' => 'Picked Up', 'description' => 'Barang telah diambil'],
                             'in_transit' => ['icon' => 'shipping-fast', 'title' => 'In Transit', 'description' => 'Barang dalam perjalanan'],
+                            'awaiting_confirmation' => ['icon' => 'clock', 'title' => 'Awaiting Confirmation', 'description' => 'Menunggu konfirmasi customer'],
                             'delivered' => ['icon' => 'check-double', 'title' => 'Delivered', 'description' => 'Barang telah diterima']
                         ];
                     @endphp
@@ -402,10 +404,26 @@
                     {{-- Admin hanya bisa melakukan konfirmasi pesanan dan request pickup --}}
 
                     @if(Auth::user()->isCustomer())
-                    <a href="{{ route('complaints.create', ['order_id' => $order->id]) }}"
-                       class="w-full inline-flex items-center justify-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors">
-                        <i class="fas fa-exclamation-triangle mr-2"></i>
-                        Laporkan Masalah
+                        @if($order->status === 'awaiting_confirmation')
+                        <button type="button" onclick="confirmDelivery()"
+                                class="w-full inline-flex items-center justify-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors mb-3">
+                            <i class="fas fa-check-circle mr-2"></i>
+                            Konfirmasi Barang Diterima
+                        </button>
+                        @endif
+                        
+                        <a href="{{ route('complaints.create', ['order_id' => $order->id]) }}"
+                           class="w-full inline-flex items-center justify-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>
+                            Laporkan Masalah
+                        </a>
+                    @endif
+
+                    @if(in_array($order->status, ['assigned', 'picked_up', 'in_transit', 'awaiting_confirmation']))
+                    <a href="{{ route('orders.tracking', $order) }}"
+                       class="w-full inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-map-marker-alt mr-2"></i>
+                        Live Tracking
                     </a>
                     @endif
                 </div>
@@ -728,6 +746,7 @@ function showManualTracking() {
                             'assigned' => ['icon' => 'user-tie', 'color' => 'indigo', 'label' => 'Ditugaskan ke Kurir'],
                             'picked_up' => ['icon' => 'truck', 'color' => 'purple', 'label' => 'Diambil Kurir'],
                             'in_transit' => ['icon' => 'route', 'color' => 'orange', 'label' => 'Dalam Perjalanan'],
+                            'awaiting_confirmation' => ['icon' => 'clock', 'color' => 'yellow', 'label' => 'Menunggu Konfirmasi'],
                             'delivered' => ['icon' => 'check-double', 'color' => 'green', 'label' => 'Terkirim']
                         ];
                     @endphp
@@ -780,6 +799,7 @@ function showManualTracking() {
                             @elseif($order->status === 'picked_up') bg-purple-100 text-purple-800
                             @elseif($order->status === 'in_transit') bg-orange-100 text-orange-800
                             @elseif($order->status === 'delivered') bg-green-100 text-green-800
+                            @elseif($order->status === 'awaiting_confirmation') bg-yellow-100 text-yellow-800
                             @else bg-gray-100 text-gray-800 @endif">
                             {{ ucfirst(str_replace('_', ' ', $order->status)) }}
                         </span>
@@ -825,6 +845,48 @@ function confirmOrder() {
         .catch(error => {
             console.error('Error:', error);
             alert('Terjadi kesalahan saat mengkonfirmasi pesanan');
+        });
+    }
+}
+
+// Function to confirm delivery by customer
+function confirmDelivery() {
+    if (confirm('Apakah Anda yakin barang telah diterima dengan baik? Setelah dikonfirmasi, pesanan akan ditandai sebagai selesai.')) {
+        // Get CSRF token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+        fetch(`/orders/{{ $order->id }}/confirm-delivery`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                let message = 'Terima kasih! Pesanan telah dikonfirmasi sebagai diterima.';
+
+                // Show WhatsApp notification link if available
+                if (data.whatsapp_link) {
+                    message += '\n\nKirim notifikasi WhatsApp ke kurir?';
+                    if (confirm(message)) {
+                        window.open(data.whatsapp_link, '_blank');
+                    }
+                } else {
+                    alert(message);
+                }
+
+                // Reload page to show updated status
+                window.location.reload();
+            } else {
+                alert('Gagal mengonfirmasi penerimaan: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Terjadi kesalahan saat mengonfirmasi penerimaan');
         });
     }
 }

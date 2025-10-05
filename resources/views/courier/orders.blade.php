@@ -131,7 +131,7 @@
                         <option value="">Pilih Status</option>
                         <option value="picked_up">Barang Diambil</option>
                         <option value="in_transit">Dalam Perjalanan</option>
-                        <option value="delivered">Terkirim</option>
+                        <option value="awaiting_confirmation">Menunggu Konfirmasi</option>
                         <option value="failed">Gagal Kirim</option>
                     </select>
                 </div>
@@ -240,6 +240,11 @@ function updateOrdersTable(orders) {
                         class="text-blue-600 hover:text-blue-900 mr-3">
                     Detail
                 </button>
+                ${['assigned', 'picked_up', 'in_transit', 'awaiting_confirmation'].includes(order.status) ? 
+                    `<a href="/orders/${order.id}/tracking" class="text-green-600 hover:text-green-900 mr-3">
+                        Live Tracking
+                    </a>` : ''
+                }
                 <button onclick="openStatusModal(${order.id})"
                         class="text-green-600 hover:text-green-900">
                     Update Status
@@ -258,6 +263,7 @@ function getStatusClass(status) {
         'picked_up': 'bg-orange-100 text-orange-800',
         'in_transit': 'bg-indigo-100 text-indigo-800',
         'delivered': 'bg-green-100 text-green-800',
+        'awaiting_confirmation': 'bg-yellow-100 text-yellow-800',
         'failed': 'bg-red-100 text-red-800',
         'cancelled': 'bg-gray-100 text-gray-800'
     };
@@ -273,6 +279,7 @@ function getStatusText(status) {
         'picked_up': 'Diambil',
         'in_transit': 'Dalam Perjalanan',
         'delivered': 'Terkirim',
+        'awaiting_confirmation': 'Menunggu Konfirmasi',
         'failed': 'Gagal',
         'cancelled': 'Dibatalkan'
     };

@@ -19,6 +19,11 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+          crossorigin=""/>
+
     <!-- Alpine.js -->
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
@@ -66,6 +71,10 @@
                                 <i class="fas fa-box mr-2"></i>Orders
                             </a>
                         @endif
+                        
+                        <a href="#" onclick="showTrackingInfo()" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                            <i class="fas fa-map-marker-alt mr-2"></i>Live Tracking
+                        </a>
                         @if(Auth::user()->isCustomer())
                             <a href="{{ route('complaints.index') }}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
                                 <i class="fas fa-exclamation-triangle mr-2"></i>Keluhan Saya
@@ -145,6 +154,10 @@
                             <i class="fas fa-box mr-2"></i>Orders
                         </a>
                     @endif
+                    
+                    <a href="#" onclick="showTrackingInfo()" class="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md text-base font-medium">
+                        <i class="fas fa-map-marker-alt mr-2"></i>Live Tracking
+                    </a>
                     @if(Auth::user()->isCustomer())
                         <a href="{{ route('complaints.index') }}" class="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md text-base font-medium">
                             <i class="fas fa-exclamation-triangle mr-2"></i>Keluhan Saya
@@ -221,6 +234,17 @@
             </div>
         </div>
     @endif
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
+
+    <script>
+        function showTrackingInfo() {
+            alert('Fitur Live Tracking memungkinkan Anda melacak lokasi kurir dan customer secara real-time. Akses fitur ini melalui halaman detail pesanan yang sedang dalam proses pengiriman.');
+        }
+    </script>
 
     @stack('scripts')
 </body>

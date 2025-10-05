@@ -154,6 +154,21 @@
             </div>
         </div>
 
+        <!-- Live Tracking -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Live Tracking</h3>
+            <div class="mb-4">
+                <a href="/orders/{{ currentOrderId }}/tracking"
+                   class="w-full inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                    <i class="fas fa-map-marker-alt mr-2"></i>
+                    Buka Live Tracking
+                </a>
+            </div>
+            <p class="text-sm text-gray-500">
+                Aktifkan tracking untuk melacak lokasi Anda secara real-time dan memungkinkan customer melihat perjalanan pengiriman.
+            </p>
+        </div>
+
         <!-- Update Status -->
         <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Update Status</h3>
@@ -167,9 +182,9 @@
                             <option value="">Pilih Status</option>
                             <option value="picked_up">Barang Diambil</option>
                             <option value="in_transit">Dalam Perjalanan</option>
-                            <option value="delivered">Terkirim</option>
                             <option value="failed">Gagal Kirim</option>
                         </select>
+                        <p class="text-xs text-gray-500 mt-1">Status "Terkirim" akan otomatis berubah setelah customer mengonfirmasi penerimaan barang</p>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -349,6 +364,7 @@ function getStatusClass(status) {
         'picked_up': 'bg-orange-100 text-orange-800',
         'in_transit': 'bg-indigo-100 text-indigo-800',
         'delivered': 'bg-green-100 text-green-800',
+        'awaiting_confirmation': 'bg-yellow-100 text-yellow-800',
         'failed': 'bg-red-100 text-red-800',
         'cancelled': 'bg-gray-100 text-gray-800'
     };
@@ -364,6 +380,7 @@ function getStatusText(status) {
         'picked_up': 'Diambil',
         'in_transit': 'Dalam Perjalanan',
         'delivered': 'Terkirim',
+        'awaiting_confirmation': 'Menunggu Konfirmasi',
         'failed': 'Gagal',
         'cancelled': 'Dibatalkan'
     };

@@ -79,6 +79,7 @@
                     @elseif($order->status === 'picked_up') bg-purple-100 text-purple-800
                     @elseif($order->status === 'in_transit') bg-orange-100 text-orange-800
                     @elseif($order->status === 'delivered') bg-green-100 text-green-800
+                    @elseif($order->status === 'awaiting_confirmation') bg-yellow-100 text-yellow-800
                     @else bg-red-100 text-red-800 @endif">
                     {{ ucfirst(str_replace('_', ' ', $order->status)) }}
                 </span>
@@ -339,6 +340,11 @@
                             @case('in_transit')
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
                                     In Transit
+                                </span>
+                                @break
+                            @case('awaiting_confirmation')
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    Awaiting Confirmation
                                 </span>
                                 @break
                             @case('delivered')

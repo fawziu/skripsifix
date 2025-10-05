@@ -113,6 +113,7 @@
                                 <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
                                     @if($order->status === 'pending') bg-yellow-100 text-yellow-800
                                     @elseif($order->status === 'confirmed') bg-blue-100 text-blue-800
+                                    @elseif($order->status === 'awaiting_confirmation') bg-yellow-100 text-yellow-800
                                     @elseif($order->status === 'assigned') bg-indigo-100 text-indigo-800
                                     @elseif($order->status === 'picked_up') bg-purple-100 text-purple-800
                                     @elseif($order->status === 'in_transit') bg-orange-100 text-orange-800
@@ -348,6 +349,7 @@ function updateActiveOrders(orders) {
     orders.forEach(order => {
         const statusClass = order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                            order.status === 'confirmed' ? 'bg-blue-100 text-blue-800' :
+                           order.status === 'awaiting_confirmation' ? 'bg-yellow-100 text-yellow-800' :
                            order.status === 'assigned' ? 'bg-indigo-100 text-indigo-800' :
                            order.status === 'picked_up' ? 'bg-purple-100 text-purple-800' :
                            'bg-orange-100 text-orange-800';
@@ -418,9 +420,16 @@ function updateRecentCompleted(orders) {
                 </div>
                 <div class="text-right">
                     <p class="text-sm font-medium text-gray-900">Rp ${order.total_cost.toLocaleString('id-ID')}</p>
-                    <a href="/orders/${order.id}" class="text-blue-600 hover:text-blue-800 text-sm">
-                        Lihat Detail
-                    </a>
+                    <div class="flex space-x-2">
+                        <a href="/orders/${order.id}" class="text-blue-600 hover:text-blue-800 text-sm">
+                            Lihat Detail
+                        </a>
+                        ${['assigned', 'picked_up', 'in_transit', 'awaiting_confirmation'].includes(order.status) ? 
+                            `<a href="/orders/${order.id}/tracking" class="text-green-600 hover:text-green-800 text-sm">
+                                Live Tracking
+                            </a>` : ''
+                        }
+                    </div>
                 </div>
             </div>
         `;

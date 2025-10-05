@@ -30,7 +30,7 @@ class CourierController extends Controller
 
         // Get assigned orders count (including pending orders that might be assigned)
         $assignedOrders = Order::where('courier_id', $user->id)
-            ->whereIn('status', ['pending', 'assigned', 'picked_up', 'in_transit', 'confirmed'])
+            ->whereIn('status', ['pending', 'assigned', 'picked_up', 'in_transit', 'confirmed', 'awaiting_confirmation'])
             ->count();
 
         // Get in progress orders count
@@ -51,7 +51,7 @@ class CourierController extends Controller
 
         // Get current deliveries
         $currentDeliveries = Order::where('courier_id', $user->id)
-            ->whereIn('status', ['pending', 'assigned', 'picked_up', 'in_transit', 'confirmed'])
+            ->whereIn('status', ['pending', 'assigned', 'picked_up', 'in_transit', 'confirmed', 'awaiting_confirmation'])
             ->with('customer')
             ->orderBy('created_at', 'desc')
             ->get();
@@ -83,7 +83,7 @@ class CourierController extends Controller
 
         // Get real-time statistics
         $assignedOrders = Order::where('courier_id', $user->id)
-            ->whereIn('status', ['pending', 'assigned', 'picked_up', 'in_transit', 'confirmed'])
+            ->whereIn('status', ['pending', 'assigned', 'picked_up', 'in_transit', 'confirmed', 'awaiting_confirmation'])
             ->count();
 
         $inProgressOrders = Order::where('courier_id', $user->id)
@@ -101,7 +101,7 @@ class CourierController extends Controller
 
         // Get current deliveries
         $currentDeliveries = Order::where('courier_id', $user->id)
-            ->whereIn('status', ['pending', 'assigned', 'picked_up', 'in_transit', 'confirmed'])
+            ->whereIn('status', ['pending', 'assigned', 'picked_up', 'in_transit', 'confirmed', 'awaiting_confirmation'])
             ->with('customer')
             ->orderBy('created_at', 'desc')
             ->get()
@@ -196,8 +196,16 @@ class CourierController extends Controller
             ], 400);
         }
 
+        // Prevent courier from marking as delivered - only customer can confirm delivery
+        if ($request->status === 'delivered') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Kurir tidak dapat menandai pesanan sebagai terkirim. Customer harus mengonfirmasi penerimaan barang.'
+            ], 400);
+        }
+
         $request->validate([
-            'status' => 'required|in:picked_up,in_transit,delivered,failed',
+            'status' => 'required|in:picked_up,in_transit,failed',
             'notes' => 'nullable|string|max:500'
         ]);
 
@@ -420,17 +428,18 @@ class CourierController extends Controller
                 $filename = 'delivery_proof_' . $order->id . '_' . time() . '.' . $file->getClientOriginalExtension();
                 $path = $file->storeAs('delivery_proofs', $filename, 'public');
 
-                // Update order with delivery proof
+                // Update order with delivery proof but don't mark as delivered yet
+                // Customer must confirm delivery
                 $order->update([
                     'delivery_proof_photo' => $path,
                     'delivery_proof_at' => now(),
-                    'status' => 'delivered'
+                    'status' => 'awaiting_confirmation'
                 ]);
 
                 // Update status history
                 $order->statusHistory()->create([
-                    'status' => 'delivered',
-                    'notes' => $request->notes ?? 'Bukti pengiriman paket berhasil diupload',
+                    'status' => 'awaiting_confirmation',
+                    'notes' => $request->notes ?? 'Bukti pengiriman paket berhasil diupload. Menunggu konfirmasi customer.',
                     'updated_by' => $user->id
                 ]);
 

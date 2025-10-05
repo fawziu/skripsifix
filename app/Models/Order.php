@@ -40,6 +40,8 @@ class Order extends Model
         'delivery_proof_photo',
         'pickup_proof_at',
         'delivery_proof_at',
+        'delivered_at',
+        'delivered_by',
     ];
 
     protected $casts = [
@@ -48,6 +50,7 @@ class Order extends Model
         'metadata' => 'array',
         'pickup_proof_at' => 'datetime',
         'delivery_proof_at' => 'datetime',
+        'delivered_at' => 'datetime',
         'item_weight' => 'decimal:2',
         'item_price' => 'decimal:2',
         'service_fee' => 'decimal:2',
@@ -77,6 +80,44 @@ class Order extends Model
     public function admin(): BelongsTo
     {
         return $this->belongsTo(User::class, 'admin_id');
+    }
+
+    /**
+     * Get the user who confirmed delivery
+     */
+    public function deliveredBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'delivered_by');
+    }
+
+    /**
+     * Get location tracking for this order
+     */
+    public function locationTracking(): HasMany
+    {
+        return $this->hasMany(LocationTracking::class);
+    }
+
+    /**
+     * Get latest courier location
+     */
+    public function latestCourierLocation()
+    {
+        return $this->locationTracking()
+            ->where('user_type', 'courier')
+            ->latest('tracked_at')
+            ->first();
+    }
+
+    /**
+     * Get latest customer location
+     */
+    public function latestCustomerLocation()
+    {
+        return $this->locationTracking()
+            ->where('user_type', 'customer')
+            ->latest('tracked_at')
+            ->first();
     }
 
     /**

@@ -37,6 +37,7 @@
                         <option value="assigned" {{ request('status') == 'assigned' ? 'selected' : '' }}>Assigned</option>
                         <option value="picked_up" {{ request('status') == 'picked_up' ? 'selected' : '' }}>Picked Up</option>
                         <option value="in_transit" {{ request('status') == 'in_transit' ? 'selected' : '' }}>In Transit</option>
+                        <option value="awaiting_confirmation" {{ request('status') == 'awaiting_confirmation' ? 'selected' : '' }}>Awaiting Confirmation</option>
                         <option value="delivered" {{ request('status') == 'delivered' ? 'selected' : '' }}>Delivered</option>
                         <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Cancelled</option>
                     </select>
@@ -143,6 +144,7 @@
                                 @elseif($order->status === 'picked_up') bg-purple-100 text-purple-800
                                 @elseif($order->status === 'in_transit') bg-orange-100 text-orange-800
                                 @elseif($order->status === 'delivered') bg-green-100 text-green-800
+                                @elseif($order->status === 'awaiting_confirmation') bg-yellow-100 text-yellow-800
                                 @else bg-red-100 text-red-800 @endif">
                                 {{ ucfirst(str_replace('_', ' ', $order->status)) }}
                             </span>

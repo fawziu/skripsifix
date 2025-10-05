@@ -214,6 +214,7 @@ class WhatsAppNotificationService
             'assigned' => 'Ditugaskan ke Kurir',
             'picked_up' => 'Diambil Kurir',
             'in_transit' => 'Dalam Perjalanan',
+            'awaiting_confirmation' => 'Menunggu Konfirmasi Customer',
             'delivered' => 'Telah Diterima',
             'cancelled' => 'Dibatalkan',
             'failed' => 'Gagal Dikirim'
@@ -270,6 +271,46 @@ class WhatsAppNotificationService
 
         $message .= "Kurir akan menghubungi Anda untuk konfirmasi pickup.\n";
         $message .= "Terima kasih telah menggunakan layanan kami!";
+
+        return $message;
+    }
+
+    /**
+     * Generate WhatsApp notification link for delivery confirmation by customer
+     */
+    public function generateDeliveryConfirmationLink(Order $order, User $customer): ?string
+    {
+        $courier = $order->courier;
+
+        if (!$courier || !$courier->phone) {
+            return null;
+        }
+
+        $phone = $this->formatPhoneNumber($courier->phone);
+        $message = $this->generateDeliveryConfirmationMessage($order, $customer);
+
+        return "https://wa.me/{$phone}?text=" . urlencode($message);
+    }
+
+    /**
+     * Generate delivery confirmation message for courier
+     */
+    private function generateDeliveryConfirmationMessage(Order $order, User $customer): string
+    {
+        $orderNumber = $order->order_number;
+        $itemDescription = $order->item_description;
+        $customerName = $customer->name;
+
+        $message = "✅ *KONFIRMASI PENERIMAAN BARANG*\n\n";
+        $message .= "Halo Kurir,\n\n";
+        $message .= "Customer telah mengonfirmasi penerimaan barang:\n\n";
+        $message .= "📦 *No. Pesanan:* {$orderNumber}\n";
+        $message .= "📝 *Deskripsi:* {$itemDescription}\n";
+        $message .= "👤 *Customer:* {$customerName}\n";
+        $message .= "⏰ *Waktu Konfirmasi:* " . now()->format('d/m/Y H:i') . "\n\n";
+
+        $message .= "Pesanan telah berhasil diselesaikan!\n";
+        $message .= "Terima kasih atas layanan pengiriman yang baik.";
 
         return $message;
     }

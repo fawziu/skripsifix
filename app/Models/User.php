@@ -178,4 +178,12 @@ class User extends Authenticatable
         ->with('courierPricing')
         ->get();
     }
+
+    /**
+     * Get location tracking for this user
+     */
+    public function locationTracking(): HasMany
+    {
+        return $this->hasMany(LocationTracking::class);
+    }
 }

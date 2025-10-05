@@ -209,6 +209,15 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/customer/dashboard', [App\Http\Controllers\CustomerController::class, 'dashboard'])->middleware('customer')->name('customer.dashboard');
     Route::get('/customer/dashboard/data', [App\Http\Controllers\CustomerController::class, 'getDashboardData'])->middleware('customer')->name('customer.dashboard.data');
+    
+    // Customer delivery confirmation route
+    Route::post('/orders/{order}/confirm-delivery', [App\Http\Controllers\CustomerController::class, 'confirmDelivery'])->middleware('customer')->name('orders.confirm-delivery');
+
+    // Tracking routes
+    Route::get('/orders/{order}/tracking', [App\Http\Controllers\TrackingController::class, 'show'])->name('orders.tracking');
+    Route::post('/orders/{order}/tracking/location', [App\Http\Controllers\TrackingController::class, 'updateLocation'])->name('orders.tracking.location');
+    Route::get('/orders/{order}/tracking/locations', [App\Http\Controllers\TrackingController::class, 'getLocations'])->name('orders.tracking.locations');
+    Route::post('/orders/{order}/tracking/start', [App\Http\Controllers\TrackingController::class, 'startTracking'])->name('orders.tracking.start');
 
     // Available couriers for manual delivery (accessible to all authenticated users)
     Route::get('/available-couriers', [OrderController::class, 'getAvailableCouriers'])->name('available.couriers');

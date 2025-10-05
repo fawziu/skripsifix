@@ -4,12 +4,23 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\Complaint;
+use App\Services\OrderService;
+use App\Services\WhatsAppNotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 
 class CustomerController extends Controller
 {
+    private OrderService $orderService;
+    private WhatsAppNotificationService $whatsappService;
+
+    public function __construct(OrderService $orderService, WhatsAppNotificationService $whatsappService)
+    {
+        $this->orderService = $orderService;
+        $this->whatsappService = $whatsappService;
+    }
     /**
      * Show customer dashboard
      */
@@ -20,7 +31,7 @@ class CustomerController extends Controller
         // Get total orders count
         $totalOrders = Order::where('customer_id', $user->id)->count();
 
-        // Get active orders count
+        // Get active orders count (including awaiting_confirmation)
         $activeOrders = Order::where('customer_id', $user->id)
             ->whereNotIn('status', ['delivered', 'cancelled'])
             ->count();
@@ -35,7 +46,7 @@ class CustomerController extends Controller
             ->where('status', 'delivered')
             ->sum('total_amount');
 
-        // Get active orders list
+        // Get active orders list (including awaiting_confirmation)
         $activeOrdersList = Order::where('customer_id', $user->id)
             ->whereNotIn('status', ['delivered', 'cancelled'])
             ->with('courier')
@@ -150,6 +161,66 @@ class CustomerController extends Controller
                 'timezone' => 'WITA'
             ]
         ]);
+    }
+
+    /**
+     * Confirm order delivery by customer
+     */
+    public function confirmDelivery(Request $request, Order $order): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+
+            // Check if user is the customer of this order
+            if ($order->customer_id !== $user->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Anda tidak memiliki akses untuk mengonfirmasi pesanan ini'
+                ], 403);
+            }
+
+            // Check if order is in awaiting_confirmation status
+            if ($order->status !== 'awaiting_confirmation') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Pesanan tidak dalam status menunggu konfirmasi. Status saat ini: ' . $order->status
+                ], 400);
+            }
+
+            // Update order status to delivered
+            $order->update([
+                'status' => 'delivered',
+                'delivered_at' => now(),
+                'delivered_by' => $user->id
+            ]);
+
+            // Create status history
+            $order->statusHistory()->create([
+                'status' => 'delivered',
+                'notes' => 'Customer mengonfirmasi barang telah diterima dengan baik',
+                'updated_by' => $user->id
+            ]);
+
+            // Generate WhatsApp notification link for courier
+            $whatsappLink = $this->whatsappService->generateDeliveryConfirmationLink($order, $user);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Terima kasih! Pesanan telah dikonfirmasi sebagai diterima',
+                'data' => [
+                    'order_id' => $order->id,
+                    'status' => 'delivered',
+                    'delivered_at' => $order->delivered_at->format('d M Y H:i:s')
+                ],
+                'whatsapp_link' => $whatsappLink
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengonfirmasi penerimaan pesanan: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }
 
