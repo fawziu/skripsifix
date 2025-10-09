@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Models\User;
 use App\Models\Address;
 use App\Models\OrderStatus;
+use App\Models\City;
 
 class OrderSeeder extends Seeder
 {
@@ -35,6 +36,9 @@ class OrderSeeder extends Seeder
             return;
         }
 
+        // Pastikan setiap customer memiliki alamat
+        $this->ensureCustomersHaveAddresses($customers);
+
         $itemDescriptions = [
             'Paket pakaian dan aksesoris',
             'Elektronik dan gadget',
@@ -45,25 +49,45 @@ class OrderSeeder extends Seeder
             'Buku dan alat tulis',
             'Mainan anak-anak',
             'Peralatan olahraga',
-            'Kosmetik dan skincare'
+            'Kosmetik dan skincare',
+            'Obat-obatan',
+            'Peralatan kantor',
+            'Bahan makanan',
+            'Peralatan masak',
+            'Aksesoris kendaraan'
         ];
 
         $shippingMethods = ['manual', 'rajaongkir'];
         $paymentMethods = ['cod', 'transfer'];
         $statuses = ['pending', 'confirmed', 'assigned', 'picked_up', 'in_transit', 'delivered'];
 
+        $orderCount = 0;
+        $manualOrderCount = 0;
+        $rajaOngkirOrderCount = 0;
+
         foreach ($customers as $customer) {
-            // Create 3-8 orders per customer
-            $numOrders = rand(3, 8);
+            // Create 4-10 orders per customer dengan distribusi yang seimbang
+            $numOrders = rand(4, 10);
 
             for ($i = 0; $i < $numOrders; $i++) {
-                $shippingMethod = $shippingMethods[array_rand($shippingMethods)];
-                $paymentMethod = $shippingMethod === 'manual' ? $paymentMethods[array_rand($paymentMethods)] : null;
+                // Pastikan distribusi 50-50 antara manual dan raja ongkir
+                if ($i < $numOrders / 2) {
+                    $shippingMethod = 'manual';
+                    $manualOrderCount++;
+                } else {
+                    $shippingMethod = 'rajaongkir';
+                    $rajaOngkirOrderCount++;
+                }
+
+                // Untuk raja ongkir, gunakan transfer sebagai default payment method
+                $paymentMethod = $shippingMethod === 'manual' ? $paymentMethods[array_rand($paymentMethods)] : 'transfer';
 
                 // Get customer addresses
                 $customerAddresses = $customer->addresses()->active()->get();
                 if ($customerAddresses->isEmpty()) {
-                    continue;
+                    // Buat alamat default jika tidak ada
+                    $this->createDefaultAddress($customer);
+                    $customerAddresses = $customer->addresses()->active()->get();
                 }
 
                 $originAddress = $customerAddresses->random();
@@ -74,15 +98,15 @@ class OrderSeeder extends Seeder
                     $destinationAddress = $customerAddresses->random();
                 }
 
-                // Generate order data
-                $itemWeight = rand(1, 50) / 10; // 0.1 to 5.0 kg
-                $itemPrice = rand(50000, 2000000); // 50k to 2M
+                // Generate order data yang lebih realistis
+                $itemWeight = $this->getRealisticWeight();
+                $itemPrice = $this->getRealisticPrice();
                 $shippingCost = $this->calculateShippingCost($itemWeight, $shippingMethod);
-                $serviceFee = $shippingMethod === 'manual' ? 5000 : 5000;
+                $serviceFee = $this->getServiceFee($shippingMethod);
                 $totalAmount = $itemPrice + $shippingCost + $serviceFee;
 
                 // Determine status and assign courier/admin accordingly
-                $status = $statuses[array_rand($statuses)];
+                $status = $this->getRealisticStatus();
                 $courierId = null;
                 $adminId = null;
 
@@ -99,7 +123,7 @@ class OrderSeeder extends Seeder
                 }
 
                 $order = Order::create([
-                    'order_number' => Order::generateOrderNumber(),
+                    'order_number' => $this->generateOrderNumber(),
                     'customer_id' => $customer->id,
                     'courier_id' => $courierId,
                     'admin_id' => $adminId,
@@ -110,6 +134,7 @@ class OrderSeeder extends Seeder
                     'shipping_cost' => $shippingCost,
                     'total_amount' => $totalAmount,
                     'shipping_method' => $shippingMethod,
+                    'payment_method' => $paymentMethod,
                     'origin_address' => $originAddress->address_line,
                     'destination_address' => $destinationAddress->address_line,
                     'origin_city' => $originAddress->city ? $originAddress->city->rajaongkir_id : null,
@@ -118,16 +143,153 @@ class OrderSeeder extends Seeder
                     'tracking_number' => $shippingMethod === 'rajaongkir' ? $this->generateTrackingNumber() : null,
                     'status' => $status,
                     'estimated_delivery' => $this->getEstimatedDelivery($status),
+                    'rajaongkir_response' => $shippingMethod === 'rajaongkir' ? $this->getRajaOngkirResponse() : null,
                     'created_at' => $this->getRandomDate(),
                     'updated_at' => $this->getRandomDate(),
                 ]);
 
                 // Create order status history
                 $this->createOrderStatusHistory($order, $status, $adminId);
+                $orderCount++;
             }
         }
 
-        $this->command->info('OrderSeeder completed successfully!');
+        $this->command->info("OrderSeeder completed successfully!");
+        $this->command->info("Total orders created: {$orderCount}");
+        $this->command->info("Manual orders: {$manualOrderCount}");
+        $this->command->info("RajaOngkir orders: {$rajaOngkirOrderCount}");
+    }
+
+    /**
+     * Pastikan setiap customer memiliki alamat
+     */
+    private function ensureCustomersHaveAddresses($customers): void
+    {
+        foreach ($customers as $customer) {
+            $addressCount = $customer->addresses()->active()->count();
+            if ($addressCount === 0) {
+                $this->createDefaultAddress($customer);
+            }
+        }
+    }
+
+    /**
+     * Buat alamat default untuk customer
+     */
+    private function createDefaultAddress(User $customer): void
+    {
+        // Ambil kota pertama yang tersedia
+        $city = City::first();
+        if (!$city) {
+            return;
+        }
+
+        Address::create([
+            'user_id' => $customer->id,
+            'type' => 'home',
+            'label' => 'Alamat Utama',
+            'recipient_name' => $customer->name,
+            'phone' => $customer->phone,
+            'province_id' => $city->province_id,
+            'city_id' => $city->id,
+            'district_id' => null,
+            'postal_code' => '90000',
+            'address_line' => $customer->address ?? 'Jl. Default No. 1',
+            'is_primary' => true,
+            'is_active' => true,
+        ]);
+    }
+
+    /**
+     * Generate order number
+     */
+    private function generateOrderNumber(): string
+    {
+        $prefix = 'ORD';
+        $date = now()->format('Ymd');
+        $random = str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
+        return $prefix . $date . $random;
+    }
+
+    /**
+     * Get realistic weight distribution
+     */
+    private function getRealisticWeight(): float
+    {
+        $weights = [0.5, 0.8, 1.0, 1.2, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 7.5, 10.0];
+        return $weights[array_rand($weights)];
+    }
+
+    /**
+     * Get realistic price distribution
+     */
+    private function getRealisticPrice(): float
+    {
+        $priceRanges = [
+            [50000, 150000],    // 50k-150k (30%)
+            [150000, 500000],   // 150k-500k (40%)
+            [500000, 1000000],  // 500k-1M (20%)
+            [1000000, 2000000]  // 1M-2M (10%)
+        ];
+        
+        $range = $priceRanges[array_rand($priceRanges)];
+        return rand($range[0], $range[1]);
+    }
+
+    /**
+     * Get service fee based on shipping method
+     */
+    private function getServiceFee(string $method): float
+    {
+        if ($method === 'manual') {
+            return rand(3000, 8000);
+        } else {
+            return rand(2000, 5000);
+        }
+    }
+
+    /**
+     * Get realistic status distribution
+     */
+    private function getRealisticStatus(): string
+    {
+        $statuses = [
+            'pending' => 15,
+            'confirmed' => 20,
+            'assigned' => 15,
+            'picked_up' => 15,
+            'in_transit' => 20,
+            'delivered' => 15
+        ];
+
+        $rand = rand(1, 100);
+        $cumulative = 0;
+        
+        foreach ($statuses as $status => $percentage) {
+            $cumulative += $percentage;
+            if ($rand <= $cumulative) {
+                return $status;
+            }
+        }
+        
+        return 'pending';
+    }
+
+    /**
+     * Get RajaOngkir response data
+     */
+    private function getRajaOngkirResponse(): array
+    {
+        $services = ['jne', 'pos', 'tiki', 'sicepat', 'jnt', 'wahana', 'ninja', 'lion'];
+        $service = $services[array_rand($services)];
+        
+        return [
+            'service' => $service,
+            'service_name' => strtoupper($service),
+            'cost' => rand(15000, 50000),
+            'etd' => rand(1, 7) . ' HARI',
+            'note' => 'Estimasi pengiriman ' . rand(1, 7) . ' hari kerja'
+        ];
     }
 
     /**

@@ -28,6 +28,12 @@ class LocationTracker {
         
         // Auto-refresh locations every 30 seconds
         setInterval(() => this.loadLocations(), 30000);
+        
+        // Auto-start tracking for customers
+        this.checkUserTypeAndAutoStart();
+        
+        // Set initial map view to courier location after loading
+        setTimeout(() => this.setInitialMapView(), 1000);
     }
 
     initMap() {
@@ -39,28 +45,32 @@ class LocationTracker {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(this.map);
 
-        // Create custom icons
+        // Create custom icons with larger size
         const courierIcon = L.divIcon({
             className: 'courier-marker',
-            html: '<i class="fas fa-truck text-white text-xs" style="margin-left: 4px; margin-top: 2px;"></i>',
-            iconSize: [20, 20],
-            iconAnchor: [10, 10]
+            html: '<div style="background: #3b82f6; border: 3px solid white; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 8px rgba(0,0,0,0.4);"><i class="fas fa-shipping-fast text-white" style="font-size: 18px;"></i></div>',
+            iconSize: [36, 36],
+            iconAnchor: [18, 18]
         });
 
         const customerIcon = L.divIcon({
             className: 'customer-marker',
-            html: '<i class="fas fa-user text-white text-xs" style="margin-left: 4px; margin-top: 2px;"></i>',
-            iconSize: [20, 20],
-            iconAnchor: [10, 10]
+            html: '<div style="background: #10b981; border: 3px solid white; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 8px rgba(0,0,0,0.4);"><i class="fas fa-home text-white" style="font-size: 18px;"></i></div>',
+            iconSize: [36, 36],
+            iconAnchor: [18, 18]
         });
 
-        // Initialize markers
-        this.courierMarker = L.marker([0, 0], { icon: courierIcon }).addTo(this.map);
-        this.customerMarker = L.marker([0, 0], { icon: customerIcon }).addTo(this.map);
+        // Initialize markers with proper coordinates
+        this.courierMarker = L.marker([-6.200000, 106.816666], { icon: courierIcon });
+        this.customerMarker = L.marker([-6.200000, 106.816666], { icon: customerIcon });
         
-        // Hide markers initially
-        this.courierMarker.setOpacity(0);
-        this.customerMarker.setOpacity(0);
+        // Add markers to map
+        this.courierMarker.addTo(this.map);
+        this.customerMarker.addTo(this.map);
+        
+        // Hide markers initially by setting them to invisible coordinates
+        this.courierMarker.setLatLng([0, 0]);
+        this.customerMarker.setLatLng([0, 0]);
     }
 
     setupEventListeners() {
@@ -81,6 +91,24 @@ class LocationTracker {
         }
     }
 
+    checkUserTypeAndAutoStart() {
+        // Check if user is customer by looking for start tracking button
+        const startTrackingBtn = document.getElementById('start-tracking-btn');
+        if (!startTrackingBtn) {
+            // Customer - auto start tracking
+            this.autoStartTrackingForCustomer();
+        }
+    }
+
+    autoStartTrackingForCustomer() {
+        // Auto-start tracking for customer after a short delay
+        setTimeout(() => {
+            if (!this.isTracking) {
+                this.startTracking();
+            }
+        }, 2000);
+    }
+
     requestLocationPermission() {
         if (!navigator.geolocation) {
             this.showLocationError('Geolocation tidak didukung oleh browser ini.');
@@ -94,12 +122,16 @@ class LocationTracker {
             },
             (error) => {
                 console.error('Location permission denied:', error);
-                this.showLocationError('Izin lokasi diperlukan untuk tracking. Silakan aktifkan izin lokasi di browser Anda.');
+                if (error.code === 3) {
+                    this.showLocationError('Timeout mendapatkan lokasi. Silakan coba lagi atau periksa koneksi GPS Anda.');
+                } else {
+                    this.showLocationError('Izin lokasi diperlukan untuk tracking. Silakan aktifkan izin lokasi di browser Anda.');
+                }
             },
             {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 60000
+                enableHighAccuracy: false, // Kurangi akurasi untuk menghindari timeout
+                timeout: 30000, // Perpanjang timeout menjadi 30 detik
+                maximumAge: 300000 // 5 menit cache
             }
         );
     }
@@ -139,11 +171,16 @@ class LocationTracker {
                 // Start watching position
                 this.locationWatchId = navigator.geolocation.watchPosition(
                     (position) => this.updateMyLocation(position),
-                    (error) => console.error('Location error:', error),
+                    (error) => {
+                        console.error('Location error:', error);
+                        if (error.code === 3) {
+                            console.warn('Location timeout, retrying...');
+                        }
+                    },
                     {
-                        enableHighAccuracy: true,
-                        timeout: 10000,
-                        maximumAge: 30000
+                        enableHighAccuracy: false,
+                        timeout: 30000,
+                        maximumAge: 60000
                     }
                 );
 
@@ -151,20 +188,34 @@ class LocationTracker {
                 this.trackingInterval = setInterval(() => {
                     navigator.geolocation.getCurrentPosition(
                         (position) => this.updateMyLocation(position),
-                        (error) => console.error('Location error:', error),
+                        (error) => {
+                            console.error('Location error:', error);
+                            if (error.code === 3) {
+                                console.warn('Location timeout, retrying...');
+                            }
+                        },
                         {
-                            enableHighAccuracy: true,
-                            timeout: 10000,
-                            maximumAge: 30000
+                            enableHighAccuracy: false,
+                            timeout: 30000,
+                            maximumAge: 60000
                         }
                     );
-                }, 10000); // Update every 10 seconds
+                }, 15000); // Update every 15 seconds
 
                 // Load initial locations
                 this.loadLocations();
             },
             (error) => {
-                this.showLocationError('Izin lokasi diperlukan untuk tracking. Silakan aktifkan izin lokasi di browser Anda.');
+                if (error.code === 3) {
+                    this.showLocationError('Timeout mendapatkan lokasi. Silakan coba lagi atau periksa koneksi GPS Anda.');
+                } else {
+                    this.showLocationError('Izin lokasi diperlukan untuk tracking. Silakan aktifkan izin lokasi di browser Anda.');
+                }
+            },
+            {
+                enableHighAccuracy: false,
+                timeout: 30000,
+                maximumAge: 300000
             }
         );
     }
@@ -230,7 +281,7 @@ class LocationTracker {
     }
 
     loadLocations() {
-        fetch(`/orders/${this.orderId}/tracking/locations`, {
+        return fetch(`/orders/${this.orderId}/tracking/locations`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json'
@@ -240,24 +291,25 @@ class LocationTracker {
         .then(data => {
             if (data.success) {
                 this.updateMapWithLocations(data.data);
+                return data.data;
             }
         })
         .catch(error => {
             console.error('Error loading locations:', error);
+            return null;
         });
     }
 
     updateMapWithLocations(data) {
-        const { courier_location, customer_location, tracking_history } = data;
+        const { courier_location, customer_location, tracking_history, user_type } = data;
 
-        // Update courier location
+        // Update courier location (always show for all users)
         if (courier_location) {
             const courierLatLng = [courier_location.latitude, courier_location.longitude];
             this.courierMarker.setLatLng(courierLatLng);
-            this.courierMarker.setOpacity(1);
             this.courierMarker.bindPopup(`
                 <div class="text-center">
-                    <h4 class="font-semibold text-blue-600">Kurir</h4>
+                    <h4 class="font-semibold text-blue-600">🚚 Kurir</h4>
                     <p class="text-sm">${courier_location.user?.name || 'Unknown'}</p>
                     <p class="text-xs text-gray-500">${new Date(courier_location.tracked_at).toLocaleString()}</p>
                 </div>
@@ -274,14 +326,13 @@ class LocationTracker {
             this.updateCourierPolyline();
         }
 
-        // Update customer location
-        if (customer_location) {
+        // Update customer location (only for courier and admin)
+        if (customer_location && (user_type === 'courier' || user_type === 'admin')) {
             const customerLatLng = [customer_location.latitude, customer_location.longitude];
             this.customerMarker.setLatLng(customerLatLng);
-            this.customerMarker.setOpacity(1);
             this.customerMarker.bindPopup(`
                 <div class="text-center">
-                    <h4 class="font-semibold text-green-600">Customer</h4>
+                    <h4 class="font-semibold text-green-600">🏠 Customer</h4>
                     <p class="text-sm">${customer_location.user?.name || 'Unknown'}</p>
                     <p class="text-xs text-gray-500">${new Date(customer_location.tracked_at).toLocaleString()}</p>
                 </div>
@@ -337,20 +388,34 @@ class LocationTracker {
         }
     }
 
+    setInitialMapView() {
+        // Try to center map on courier location first
+        this.loadLocations().then((data) => {
+            if (data && data.courier_location) {
+                const courierLatLng = [data.courier_location.latitude, data.courier_location.longitude];
+                this.map.setView(courierLatLng, 15);
+            }
+        });
+    }
+
     fitMapToMarkers() {
         const markers = [];
         
-        if (this.courierMarker.getOpacity() > 0) {
+        // Check if markers exist and are visible
+        if (this.courierMarker && this.courierMarker.getLatLng && this.courierMarker.getLatLng().lat !== 0) {
             markers.push(this.courierMarker);
         }
         
-        if (this.customerMarker.getOpacity() > 0) {
+        if (this.customerMarker && this.customerMarker.getLatLng && this.customerMarker.getLatLng().lat !== 0) {
             markers.push(this.customerMarker);
         }
 
         if (markers.length > 0) {
             const group = new L.featureGroup(markers);
             this.map.fitBounds(group.getBounds().pad(0.1));
+        } else if (markers.length === 1) {
+            // If only one marker, center on it with higher zoom
+            this.map.setView(markers[0].getLatLng(), 15);
         }
     }
 

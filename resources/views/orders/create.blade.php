@@ -352,9 +352,57 @@
                             <label for="origin_address" class="block text-sm font-medium text-gray-700 mb-1">
                                 Alamat Asal <span class="text-red-500">*</span>
                             </label>
+                            
+                            <!-- Location Controls -->
+                            <div class="mb-3 flex items-center space-x-3">
+                                <button type="button" id="get-location-btn" 
+                                        class="inline-flex items-center px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors">
+                                    <i class="fas fa-map-marker-alt mr-2"></i>
+                                    Dapatkan Lokasi Saya
+                                </button>
+                                <button type="button" id="clear-location-btn" 
+                                        class="inline-flex items-center px-3 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors hidden">
+                                    <i class="fas fa-times mr-2"></i>
+                                    Hapus Lokasi
+                                </button>
+                                <div id="location-status" class="text-sm text-gray-500 hidden">
+                                    <i class="fas fa-spinner fa-spin mr-1"></i>
+                                    Mendapatkan lokasi...
+                                </div>
+                            </div>
+
+                            <!-- Address Input -->
                             <textarea id="origin_address" name="origin_address" rows="3" required
                                       class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('origin_address') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror"
-                                      placeholder="Masukkan alamat asal pengiriman">{{ old('origin_address') }}</textarea>
+                                      placeholder="Masukkan alamat asal pengiriman atau gunakan tombol 'Dapatkan Lokasi Saya'">{{ old('origin_address') }}</textarea>
+                            
+                            <!-- Location Info Display -->
+                            <div id="location-info" class="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg hidden">
+                                <div class="flex items-start space-x-3">
+                                    <div class="flex-shrink-0">
+                                        <i class="fas fa-map-marker-alt text-blue-600 mt-1"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h4 class="text-sm font-medium text-blue-900">Lokasi GPS Terdeteksi</h4>
+                                        <p class="text-sm text-blue-700 mt-1" id="location-address">Alamat akan ditampilkan di sini</p>
+                                        <div class="mt-2 text-xs text-blue-600">
+                                            <span>Koordinat: </span>
+                                            <span id="location-coords">-</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <button type="button" id="preview-location-btn" 
+                                                class="text-blue-600 hover:text-blue-800 text-sm">
+                                            <i class="fas fa-eye mr-1"></i>Lihat di Peta
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Hidden fields for GPS coordinates -->
+                            <input type="hidden" id="origin_latitude" name="origin_latitude" value="{{ old('origin_latitude') }}">
+                            <input type="hidden" id="origin_longitude" name="origin_longitude" value="{{ old('origin_longitude') }}">
+
                             @error('origin_address')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
@@ -521,6 +569,7 @@ function orderForm() {
         shippingMethod: 'manual',
         paymentMethod: 'cod',
         selectedCourierBankInfo: null,
+        currentLocation: null,
 
         init() {
             this.updateCostSummary();
@@ -531,6 +580,182 @@ function orderForm() {
             // Trigger initial display
             this.toggleShippingMethod();
             this.togglePaymentMethod();
+            // Initialize location functionality
+            this.initLocationFeatures();
+        },
+
+        initLocationFeatures() {
+            const getLocationBtn = document.getElementById('get-location-btn');
+            const clearLocationBtn = document.getElementById('clear-location-btn');
+            const previewLocationBtn = document.getElementById('preview-location-btn');
+
+            if (getLocationBtn) {
+                getLocationBtn.addEventListener('click', () => this.getCurrentLocation());
+            }
+
+            if (clearLocationBtn) {
+                clearLocationBtn.addEventListener('click', () => this.clearLocation());
+            }
+
+            if (previewLocationBtn) {
+                previewLocationBtn.addEventListener('click', () => this.previewLocation());
+            }
+        },
+
+        getCurrentLocation() {
+            const statusDiv = document.getElementById('location-status');
+            const getLocationBtn = document.getElementById('get-location-btn');
+            const clearLocationBtn = document.getElementById('clear-location-btn');
+
+            // Show loading state
+            statusDiv.classList.remove('hidden');
+            getLocationBtn.disabled = true;
+            getLocationBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Mendapatkan...';
+
+            if (!navigator.geolocation) {
+                this.showLocationError('Geolocation tidak didukung oleh browser ini.');
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    this.handleLocationSuccess(position);
+                },
+                (error) => {
+                    this.handleLocationError(error);
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 30000,
+                    maximumAge: 300000
+                }
+            );
+        },
+
+        handleLocationSuccess(position) {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            const accuracy = position.coords.accuracy;
+
+            this.currentLocation = { lat, lng, accuracy };
+
+            // Update hidden fields
+            document.getElementById('origin_latitude').value = lat;
+            document.getElementById('origin_longitude').value = lng;
+
+            // Get address from coordinates using reverse geocoding
+            this.reverseGeocode(lat, lng);
+
+            // Update UI
+            this.updateLocationUI();
+        },
+
+        handleLocationError(error) {
+            const statusDiv = document.getElementById('location-status');
+            const getLocationBtn = document.getElementById('get-location-btn');
+
+            statusDiv.classList.add('hidden');
+            getLocationBtn.disabled = false;
+            getLocationBtn.innerHTML = '<i class="fas fa-map-marker-alt mr-2"></i>Dapatkan Lokasi Saya';
+
+            let errorMessage = 'Gagal mendapatkan lokasi. ';
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    errorMessage += 'Izin lokasi ditolak. Silakan aktifkan izin lokasi di browser Anda.';
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    errorMessage += 'Lokasi tidak tersedia. Periksa koneksi GPS Anda.';
+                    break;
+                case error.TIMEOUT:
+                    errorMessage += 'Timeout mendapatkan lokasi. Silakan coba lagi.';
+                    break;
+                default:
+                    errorMessage += 'Terjadi kesalahan yang tidak diketahui.';
+                    break;
+            }
+
+            alert(errorMessage);
+        },
+
+        reverseGeocode(lat, lng) {
+            // Use OpenStreetMap Nominatim for reverse geocoding
+            const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.display_name) {
+                        const address = data.display_name;
+                        document.getElementById('origin_address').value = address;
+                        document.getElementById('location-address').textContent = address;
+                    } else {
+                        document.getElementById('location-address').textContent = `Koordinat: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                    }
+                })
+                .catch(error => {
+                    console.error('Reverse geocoding error:', error);
+                    document.getElementById('location-address').textContent = `Koordinat: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                });
+        },
+
+        updateLocationUI() {
+            const statusDiv = document.getElementById('location-status');
+            const getLocationBtn = document.getElementById('get-location-btn');
+            const clearLocationBtn = document.getElementById('clear-location-btn');
+            const locationInfo = document.getElementById('location-info');
+            const coordsSpan = document.getElementById('location-coords');
+
+            // Hide loading state
+            statusDiv.classList.add('hidden');
+            getLocationBtn.disabled = false;
+            getLocationBtn.innerHTML = '<i class="fas fa-map-marker-alt mr-2"></i>Dapatkan Lokasi Saya';
+
+            // Show location info
+            locationInfo.classList.remove('hidden');
+            clearLocationBtn.classList.remove('hidden');
+
+            // Update coordinates display
+            if (this.currentLocation) {
+                coordsSpan.textContent = `${this.currentLocation.lat.toFixed(6)}, ${this.currentLocation.lng.toFixed(6)}`;
+            }
+        },
+
+        clearLocation() {
+            const locationInfo = document.getElementById('location-info');
+            const clearLocationBtn = document.getElementById('clear-location-btn');
+            const originAddress = document.getElementById('origin_address');
+
+            // Clear location data
+            this.currentLocation = null;
+            document.getElementById('origin_latitude').value = '';
+            document.getElementById('origin_longitude').value = '';
+            originAddress.value = '';
+
+            // Hide location info
+            locationInfo.classList.add('hidden');
+            clearLocationBtn.classList.add('hidden');
+        },
+
+        previewLocation() {
+            if (!this.currentLocation) return;
+
+            const lat = this.currentLocation.lat;
+            const lng = this.currentLocation.lng;
+
+            // Open location in new tab with maps
+            const mapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
+            window.open(mapsUrl, '_blank');
+        },
+
+        showLocationError(message) {
+            const statusDiv = document.getElementById('location-status');
+            const getLocationBtn = document.getElementById('get-location-btn');
+
+            statusDiv.classList.add('hidden');
+            getLocationBtn.disabled = false;
+            getLocationBtn.innerHTML = '<i class="fas fa-map-marker-alt mr-2"></i>Dapatkan Lokasi Saya';
+
+            alert(message);
         },
 
         toggleShippingMethod() {

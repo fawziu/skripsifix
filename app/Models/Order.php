@@ -27,7 +27,11 @@ class Order extends Model
         'payment_method',
         'courier_bank_info',
         'origin_address',
+        'origin_latitude',
+        'origin_longitude',
         'destination_address',
+        'destination_latitude',
+        'destination_longitude',
         'origin_city',
         'destination_city',
         'courier_service',
@@ -56,6 +60,10 @@ class Order extends Model
         'service_fee' => 'decimal:2',
         'shipping_cost' => 'decimal:2',
         'total_amount' => 'decimal:2',
+        'origin_latitude' => 'decimal:8',
+        'origin_longitude' => 'decimal:8',
+        'destination_latitude' => 'decimal:8',
+        'destination_longitude' => 'decimal:8',
     ];
 
     /**

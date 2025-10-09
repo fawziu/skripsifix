@@ -24,6 +24,12 @@ class TrackingController extends Controller
                 ->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk melihat tracking pesanan ini.');
         }
 
+        // Check if order is in a trackable status
+        if (!in_array($order->status, ['assigned', 'picked_up', 'in_transit', 'awaiting_confirmation'])) {
+            return redirect()->route('orders.show', $order)
+                ->with('error', 'Tracking tidak tersedia untuk status pesanan ini.');
+        }
+
         $order->load(['customer', 'courier']);
 
         return view('tracking.show', compact('order'));
@@ -83,6 +89,13 @@ class TrackingController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            \Log::error('Tracking updateLocation error: ' . $e->getMessage(), [
+                'order_id' => $order->id,
+                'user_id' => Auth::id(),
+                'request_data' => $request->all(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update location: ' . $e->getMessage(),
@@ -106,27 +119,43 @@ class TrackingController extends Controller
                 ], 403);
             }
 
-            // Get latest locations for both courier and customer
+            // Get latest courier location (always available for all users)
             $courierLocation = LocationTracking::where('order_id', $order->id)
-                ->courier()
-                ->recent()
+                ->where('user_type', 'courier')
+                ->where('tracked_at', '>=', now()->subDay())
                 ->latest('tracked_at')
                 ->first();
 
-            $customerLocation = LocationTracking::where('order_id', $order->id)
-                ->customer()
-                ->recent()
-                ->latest('tracked_at')
-                ->first();
+            $customerLocation = null;
+            $trackingHistory = collect();
 
-            // Get recent tracking history (last 50 points)
-            $trackingHistory = LocationTracking::where('order_id', $order->id)
-                ->recent()
-                ->with('user')
-                ->orderBy('tracked_at', 'desc')
-                ->limit(50)
-                ->get()
-                ->groupBy('user_type');
+            // Only show customer location and full history for courier and admin
+            if ($user->isCourier() || $user->isAdmin()) {
+                $customerLocation = LocationTracking::where('order_id', $order->id)
+                    ->where('user_type', 'customer')
+                    ->where('tracked_at', '>=', now()->subDay())
+                    ->latest('tracked_at')
+                    ->first();
+
+                // Get recent tracking history (last 50 points) for courier/admin
+                $trackingHistory = LocationTracking::where('order_id', $order->id)
+                    ->where('tracked_at', '>=', now()->subDay())
+                    ->with('user')
+                    ->orderBy('tracked_at', 'desc')
+                    ->limit(50)
+                    ->get()
+                    ->groupBy('user_type');
+            } else {
+                // For customer, only show courier tracking history
+                $trackingHistory = LocationTracking::where('order_id', $order->id)
+                    ->where('user_type', 'courier')
+                    ->where('tracked_at', '>=', now()->subDay())
+                    ->with('user')
+                    ->orderBy('tracked_at', 'desc')
+                    ->limit(50)
+                    ->get()
+                    ->groupBy('user_type');
+            }
 
             return response()->json([
                 'success' => true,
@@ -134,10 +163,17 @@ class TrackingController extends Controller
                     'courier_location' => $courierLocation,
                     'customer_location' => $customerLocation,
                     'tracking_history' => $trackingHistory,
+                    'user_type' => $user->isCourier() ? 'courier' : 'customer',
                 ],
             ]);
 
         } catch (\Exception $e) {
+            \Log::error('Tracking getLocations error: ' . $e->getMessage(), [
+                'order_id' => $order->id,
+                'user_id' => Auth::id(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to get locations: ' . $e->getMessage(),

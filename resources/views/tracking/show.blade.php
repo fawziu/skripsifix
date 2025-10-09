@@ -17,11 +17,13 @@
                     <i class="fas fa-arrow-left mr-2"></i>
                     Kembali ke Detail
                 </a>
+                @if(Auth::user()->isCourier() || Auth::user()->isAdmin())
                 <button id="start-tracking-btn" 
                         class="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors">
                     <i class="fas fa-play mr-2"></i>
                     Mulai Tracking
                 </button>
+                @endif
             </div>
         </div>
     </div>
@@ -53,10 +55,12 @@
                             <div class="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
                             <span class="text-sm text-gray-600">Kurir</span>
                         </div>
+                        @if(Auth::user()->isCourier() || Auth::user()->isAdmin())
                         <div class="flex items-center">
                             <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
                             <span class="text-sm text-gray-600">Customer</span>
                         </div>
+                        @endif
                     </div>
                     <div class="text-sm text-gray-500">
                         <span id="last-update">Belum ada data lokasi</span>
@@ -121,7 +125,8 @@
             </div>
             @endif
 
-            <!-- Customer Info -->
+            <!-- Customer Info - Only for courier and admin -->
+            @if(Auth::user()->isCourier() || Auth::user()->isAdmin())
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Informasi Customer</h3>
                 <div class="space-y-3">
@@ -139,6 +144,7 @@
                     </div>
                 </div>
             </div>
+            @endif
 
             <!-- Tracking Controls -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -164,6 +170,7 @@
 <style>
     .leaflet-popup-content-wrapper {
         border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
     .leaflet-popup-content {
         margin: 8px 12px;
@@ -171,17 +178,28 @@
     }
     .courier-marker {
         background-color: #3b82f6;
-        border: 2px solid #ffffff;
+        border: 3px solid #ffffff;
         border-radius: 50%;
-        width: 20px;
-        height: 20px;
+        width: 36px;
+        height: 36px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
     .customer-marker {
         background-color: #10b981;
-        border: 2px solid #ffffff;
+        border: 3px solid #ffffff;
         border-radius: 50%;
-        width: 20px;
-        height: 20px;
+        width: 36px;
+        height: 36px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .leaflet-marker-icon {
+        border-radius: 50%;
     }
 </style>
 @endpush

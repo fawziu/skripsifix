@@ -10,6 +10,8 @@ class LocationTracking extends Model
 {
     use HasFactory;
 
+    protected $table = 'location_tracking';
+
     protected $fillable = [
         'order_id',
         'user_id',

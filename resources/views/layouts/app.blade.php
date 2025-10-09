@@ -72,9 +72,6 @@
                             </a>
                         @endif
                         
-                        <a href="#" onclick="showTrackingInfo()" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
-                            <i class="fas fa-map-marker-alt mr-2"></i>Live Tracking
-                        </a>
                         @if(Auth::user()->isCustomer())
                             <a href="{{ route('complaints.index') }}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
                                 <i class="fas fa-exclamation-triangle mr-2"></i>Keluhan Saya
