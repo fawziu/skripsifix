@@ -160,7 +160,11 @@ class OrderController extends Controller
                 'shipping_method' => $request->shipping_method,
                 'payment_method' => $request->shipping_method === 'manual' ? $request->payment_method : null,
                 'origin_address' => $request->origin_address,
+                'origin_latitude' => $request->origin_latitude,
+                'origin_longitude' => $request->origin_longitude,
                 'destination_address' => $destinationAddress ? $destinationAddress->full_address : $request->destination_address,
+                'destination_latitude' => $destinationAddress ? $destinationAddress->latitude : $request->destination_latitude,
+                'destination_longitude' => $destinationAddress ? $destinationAddress->longitude : $request->destination_longitude,
                 'origin_province' => $request->origin_province,
                 'origin_city' => $request->origin_city,
                 'destination_province' => $destinationAddress && $destinationAddress->province ? $destinationAddress->province->rajaongkir_id : null,
@@ -308,6 +312,11 @@ class OrderController extends Controller
                             ],
                             'whatsapp_link' => $whatsappLink,
                         ]);
+                    } else {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Failed to generate waybill data',
+                        ], 500);
                     }
                 } catch (\Exception $e) {
                     Log::error('Failed to generate RajaOngkir waybill', [
