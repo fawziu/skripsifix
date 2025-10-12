@@ -55,6 +55,9 @@ class AddressController extends Controller
             'district_id' => 'nullable|integer',
             'postal_code' => 'nullable|string|max:10',
             'address_line' => 'required|string',
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
+            'accuracy' => 'nullable|numeric|min:0',
             'is_primary' => 'boolean',
         ]);
 
@@ -123,6 +126,9 @@ class AddressController extends Controller
             'district_id' => 'nullable|integer',
             'postal_code' => 'nullable|string|max:10',
             'address_line' => 'required|string',
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
+            'accuracy' => 'nullable|numeric|min:0',
             'is_primary' => 'boolean',
         ]);
 
@@ -275,5 +281,23 @@ class AddressController extends Controller
             'success' => true,
             'data' => $districts
         ]);
+    }
+
+    /**
+     * Display map view of addresses for courier
+     */
+    public function map()
+    {
+        // Only allow courier access
+        if (!Auth::user()->isCourier()) {
+            return redirect()->route('dashboard')
+                ->with('error', 'Akses ditolak.');
+        }
+
+        $addresses = Address::with(['province', 'city', 'district'])
+            ->where('is_active', true)
+            ->get();
+
+        return view('addresses.map', compact('addresses'));
     }
 }

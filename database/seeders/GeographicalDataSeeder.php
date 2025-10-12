@@ -18,9 +18,17 @@ class GeographicalDataSeeder extends Seeder
         $geographicalService = new LocalGeographicalService();
 
         // Get provinces
-        $provinces = $geographicalService->getProvinces();
+        // Hanya ambil data untuk Papua dan Sulawesi Selatan
+        $targetProvinces = [
+            ['rajaongkir_id' => 26, 'id' => 26, 'name' => 'Papua'],
+            ['rajaongkir_id' => 28, 'id' => 28, 'name' => 'Papua Barat'],
+            ['rajaongkir_id' => 27, 'id' => 27, 'name' => 'Papua Selatan'],
+            ['rajaongkir_id' => 29, 'id' => 29, 'name' => 'Papua Tengah'],
+            ['rajaongkir_id' => 30, 'id' => 30, 'name' => 'Papua Pegunungan'],
+            ['rajaongkir_id' => 28, 'id' => 28, 'name' => 'Sulawesi Selatan'],
+        ];
 
-        foreach ($provinces as $provinceData) {
+        foreach ($targetProvinces as $provinceData) {
             $province = Province::updateOrCreate(
                 ['rajaongkir_id' => $provinceData['rajaongkir_id']],
                 [
@@ -32,7 +40,38 @@ class GeographicalDataSeeder extends Seeder
             // Get cities for this province
             $cities = $geographicalService->getCities($provinceData['id']);
 
-            foreach ($cities as $cityData) {
+            // Filter kota-kota yang relevan
+            $relevantCities = [];
+            if ($provinceData['name'] === 'Sulawesi Selatan') {
+                // Hanya kota Makassar dan sekitarnya
+                $relevantCities = array_filter($cities, function($city) {
+                    return in_array($city['name'], [
+                        'Makassar',
+                        'Gowa',
+                        'Maros',
+                        'Takalar',
+                        'Pangkajene Kepulauan'
+                    ]);
+                });
+            } elseif (str_contains($provinceData['name'], 'Papua')) {
+                // Kota-kota utama di Papua
+                $relevantCities = array_filter($cities, function($city) {
+                    return in_array($city['name'], [
+                        'Jayapura',
+                        'Merauke',
+                        'Timika',
+                        'Sorong',
+                        'Manokwari',
+                        'Nabire',
+                        'Biak Numfor',
+                        'Jayawijaya',
+                        'Mimika',
+                        'Keerom'
+                    ]);
+                });
+            }
+
+            foreach ($relevantCities as $cityData) {
                 $city = City::updateOrCreate(
                     ['rajaongkir_id' => $cityData['rajaongkir_id']],
                     [
@@ -47,7 +86,34 @@ class GeographicalDataSeeder extends Seeder
                 // Get districts for this city
                 $districts = $geographicalService->getDistricts($cityData['id']);
 
-                foreach ($districts as $districtData) {
+                // Filter kecamatan yang relevan
+                $relevantDistricts = [];
+                if ($cityData['name'] === 'Makassar') {
+                    // Kecamatan di Makassar
+                    $relevantDistricts = array_filter($districts, function($district) {
+                        return in_array($district['name'], [
+                            'Panakkukang',
+                            'Makassar',
+                            'Mariso',
+                            'Mamajang',
+                            'Tamalate',
+                            'Rappocini',
+                            'Tamalanrea',
+                            'Biringkanaya',
+                            'Manggala',
+                            'Tallo',
+                            'Ujung Pandang',
+                            'Wajo',
+                            'Bontoala',
+                            'Ujung Tanah'
+                        ]);
+                    });
+                } else {
+                    // Untuk kota lain, ambil semua kecamatan
+                    $relevantDistricts = $districts;
+                }
+
+                foreach ($relevantDistricts as $districtData) {
                     District::updateOrCreate(
                         ['rajaongkir_id' => $districtData['id']],
                         [

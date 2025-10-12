@@ -18,8 +18,8 @@ class DatabaseSeeder extends Seeder
             CourierPricingSeeder::class,
             CourierBankInfoSeeder::class,
             GeographicalDataSeeder::class,
-            // AddressSeeder::class,
-            // OrderSeeder::class,
+            AddressSeeder::class,
+            OrderSeeder::class,
             ComplaintSeeder::class,
         ]);
     }

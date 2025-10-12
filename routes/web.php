@@ -187,6 +187,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/courier/dashboard/data', [App\Http\Controllers\CourierController::class, 'getDashboardData'])->middleware('courier')->name('courier.dashboard.data');
 
     // Courier order management routes
+    Route::get('/courier/addresses/map', [AddressController::class, 'map'])->middleware('courier')->name('courier.addresses.map');
     Route::get('/courier/orders', function() {
         return view('courier.orders');
     })->middleware('courier')->name('courier.orders.index');

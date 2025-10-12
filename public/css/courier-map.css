@@ -1,0 +1,23 @@
+.current-location-marker {
+    background: none;
+    border: none;
+}
+
+.current-location-marker .ping {
+    display: block;
+    width: 18px;
+    height: 18px;
+    background-color: #3B82F6;
+    border: 2px solid white;
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px #3B82F6;
+    position: relative;
+    animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes ping {
+    75%, 100% {
+        transform: scale(2);
+        opacity: 0;
+    }
+}

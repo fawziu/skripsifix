@@ -27,8 +27,7 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->timestamps();
 
-            // Ensure only one primary address per user
-            $table->unique(['user_id', 'is_primary'], 'unique_primary_address');
+            // We'll handle the unique primary address constraint in the application logic
         });
     }
 

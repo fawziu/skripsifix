@@ -21,6 +21,9 @@ class Address extends Model
         'district_id',
         'postal_code',
         'address_line',
+        'latitude',
+        'longitude',
+        'accuracy',
         'is_primary',
         'is_active',
     ];
@@ -28,6 +31,9 @@ class Address extends Model
     protected $casts = [
         'is_primary' => 'boolean',
         'is_active' => 'boolean',
+        'latitude' => 'decimal:8',
+        'longitude' => 'decimal:8',
+        'accuracy' => 'decimal:2',
     ];
 
     /**

@@ -184,6 +184,13 @@ class OrderSeeder extends Seeder
             return;
         }
 
+        // Generate default coordinates (Makassar)
+        $coordinates = [
+            'latitude' => -5.135399 + (rand(-10000, 10000) / 100000),
+            'longitude' => 119.423790 + (rand(-10000, 10000) / 100000),
+            'accuracy' => rand(5, 50)
+        ];
+
         Address::create([
             'user_id' => $customer->id,
             'type' => 'home',
@@ -195,6 +202,9 @@ class OrderSeeder extends Seeder
             'district_id' => null,
             'postal_code' => '90000',
             'address_line' => $customer->address ?? 'Jl. Default No. 1',
+            'latitude' => $coordinates['latitude'],
+            'longitude' => $coordinates['longitude'],
+            'accuracy' => $coordinates['accuracy'],
             'is_primary' => true,
             'is_active' => true,
         ]);
@@ -205,10 +215,18 @@ class OrderSeeder extends Seeder
      */
     private function generateOrderNumber(): string
     {
-        $prefix = 'ORD';
-        $date = now()->format('Ymd');
-        $random = str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
-        return $prefix . $date . $random;
+        do {
+            $prefix = 'ORD';
+            $date = now()->format('Ymd');
+            $random = str_pad(rand(1, 99999), 5, '0', STR_PAD_LEFT);
+            $microtime = substr(str_replace('.', '', microtime(true)), -3);
+            $orderNumber = $prefix . $date . $random . $microtime;
+            
+            // Check if order number already exists
+            $exists = \App\Models\Order::where('order_number', $orderNumber)->exists();
+        } while ($exists);
+        
+        return $orderNumber;
     }
 
     /**
