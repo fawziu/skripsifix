@@ -139,10 +139,10 @@
                 </div>
             </div>
 
-            <!-- Delivery Proof -->
+            <!-- Delivery/Receipt Proof -->
             @if($order->pickup_proof_photo || $order->delivery_proof_photo)
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Bukti Pengiriman</h3>
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Bukti Pengiriman / Penerimaan</h3>
 
                 @if($order->pickup_proof_photo)
                 <div class="mb-4">
@@ -164,14 +164,14 @@
 
                 @if($order->delivery_proof_photo)
                 <div>
-                    <h4 class="text-sm font-medium text-gray-600 mb-2">Bukti Pengiriman Paket</h4>
+                    <h4 class="text-sm font-medium text-gray-600 mb-2">Bukti Penerimaan Paket</h4>
                     <div class="flex items-center space-x-3">
                         <img src="{{ asset('storage/' . $order->delivery_proof_photo) }}"
-                             alt="Bukti Pengiriman"
+                             alt="Bukti Penerimaan"
                              class="w-24 h-24 object-cover rounded-lg border border-gray-200 cursor-pointer"
-                             onclick="viewProofPhoto('{{ $order->delivery_proof_photo }}', 'Bukti Pengiriman Paket')">
+                             onclick="viewProofPhoto('{{ $order->delivery_proof_photo }}', 'Bukti Penerimaan Paket')">
                         <div>
-                            <p class="text-sm text-gray-900">Foto bukti pengiriman paket</p>
+                            <p class="text-sm text-gray-900">Foto bukti penerimaan paket</p>
                             @if($order->delivery_proof_at)
                                 <p class="text-xs text-gray-500">Dikirim pada: {{ $order->delivery_proof_at->format('d M Y H:i') }}</p>
                             @endif
@@ -403,13 +403,43 @@
                     {{-- Button Tugaskan Kurir dan Update Status dihilangkan untuk admin --}}
                     {{-- Admin hanya bisa melakukan konfirmasi pesanan dan request pickup --}}
 
-                    @if(Auth::user()->isCustomer())
-                        @if($order->status === 'awaiting_confirmation')
+                    @if(Auth::user()->isCustomer() && Auth::id() === $order->customer_id)
+                        @if(in_array($order->status, ['in_transit','awaiting_confirmation']))
                         <button type="button" onclick="confirmDelivery()"
                                 class="w-full inline-flex items-center justify-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors mb-3">
                             <i class="fas fa-check-circle mr-2"></i>
                             Konfirmasi Barang Diterima
                         </button>
+
+                        <div class="bg-white rounded-lg border border-gray-200 p-4 mb-3">
+                            <h4 class="text-sm font-medium text-gray-900 mb-3">Upload Bukti Penerimaan</h4>
+                            <form id="customer-receipt-proof-form" class="space-y-3">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Foto Bukti Penerimaan</label>
+                                    <div class="flex items-center space-x-3">
+                                        <input type="file" id="receipt_proof_photo" name="receipt_proof_photo" accept="image/*" capture="environment"
+                                               class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                                        <button type="button" onclick="document.getElementById('receipt_proof_photo').click()"
+                                                class="inline-flex items-center px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors">
+                                            <i class="fas fa-camera mr-2"></i>Kamera
+                                        </button>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1">Format: JPG, PNG. Maksimal 2MB</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Catatan (Opsional)</label>
+                                    <textarea id="receipt-notes" name="notes" rows="2"
+                                              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                              placeholder="Tambahkan catatan jika diperlukan"></textarea>
+                                </div>
+                                <div class="flex justify-end">
+                                    <button type="submit" id="receipt-submit-btn"
+                                            class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                                        <i class="fas fa-upload mr-2"></i>Upload Bukti Penerimaan
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                         @endif
                         
                         <a href="{{ route('complaints.create', ['order_id' => $order->id]) }}"
@@ -852,16 +882,26 @@ function confirmOrder() {
 // Function to confirm delivery by customer
 function confirmDelivery() {
     if (confirm('Apakah Anda yakin barang telah diterima dengan baik? Setelah dikonfirmasi, pesanan akan ditandai sebagai selesai.')) {
-        // Get CSRF token
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const formEl = document.getElementById('customer-receipt-proof-form');
+        const fileInput = document.getElementById('receipt_proof_photo');
+        const notesInput = document.getElementById('receipt-notes');
+
+        const formData = new FormData();
+        if (fileInput && fileInput.files[0]) {
+            formData.append('delivery_proof_photo', fileInput.files[0]);
+        }
+        if (notesInput && notesInput.value) {
+            formData.append('notes', notesInput.value);
+        }
 
         fetch(`/orders/{{ $order->id }}/confirm-delivery`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': csrfToken,
                 'Accept': 'application/json'
-            }
+            },
+            body: formData
         })
         .then(response => response.json())
         .then(data => {

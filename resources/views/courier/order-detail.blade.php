@@ -112,53 +112,19 @@
                 </form>
             </div>
 
-            <!-- Delivery Proof Upload -->
-            <div class="p-4 border border-gray-200 rounded-lg">
-                <h4 class="text-md font-medium text-gray-900 mb-3">Bukti Pengiriman Paket</h4>
-                <div id="delivery-proof-status" class="mb-3">
-                    <!-- Will be populated by JavaScript -->
-                </div>
-                <form id="delivery-proof-form" class="space-y-3">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Foto Bukti Pengiriman
-                        </label>
-                        <div class="flex items-center space-x-3">
-                            <input type="file" id="delivery_proof_photo" name="delivery_proof_photo"
-                                   accept="image/*" capture="environment"
-                                   class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
-                            <button type="button" onclick="openCamera('delivery_proof_photo')"
-                                    class="inline-flex items-center px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors">
-                                <i class="fas fa-camera mr-2"></i>
-                                Kamera
-                            </button>
-                        </div>
-                        <p class="text-xs text-gray-500 mt-1">Format: JPG, PNG. Maksimal 2MB</p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Catatan (Opsional)
-                        </label>
-                        <textarea id="delivery-notes" name="notes" rows="2"
-                                  class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                  placeholder="Tambahkan catatan jika diperlukan"></textarea>
-                    </div>
-                    <div class="flex justify-end">
-                        <button type="submit" id="delivery-submit-btn"
-                                class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
-                            <i class="fas fa-upload mr-2"></i>
-                            Upload Bukti Pengiriman
-                        </button>
-                    </div>
-                </form>
-            </div>
+        <!-- Delivery Proof (status only, form removed per requirements) -->
+        <div class="p-4 border border-gray-200 rounded-lg">
+            <h4 class="text-md font-medium text-gray-900 mb-3">Bukti Pengiriman Paket</h4>
+            <div id="delivery-proof-status" class="mb-2"></div>
+            <p class="text-xs text-gray-500">Upload bukti pengiriman kini dilakukan oleh customer saat konfirmasi penerimaan.</p>
+        </div>
         </div>
 
         <!-- Live Tracking -->
         <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Live Tracking</h3>
             <div class="mb-4">
-                <a href="/orders/{{ currentOrderId }}/tracking"
+                <a id="open-tracking-link" href="#"
                    class="w-full inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
                     <i class="fas fa-map-marker-alt mr-2"></i>
                     Buka Live Tracking
@@ -217,6 +183,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const pathParts = window.location.pathname.split('/');
     currentOrderId = pathParts[pathParts.length - 2]; // /courier/orders/{id}/detail
     loadOrderDetail();
+
+    // Set tracking link href dynamically
+    const trackingLink = document.getElementById('open-tracking-link');
+    if (trackingLink && currentOrderId) {
+        trackingLink.href = `/orders/${currentOrderId}/tracking`;
+    }
 });
 
 function loadOrderDetail() {
@@ -458,9 +430,7 @@ function updateDeliveryProofStatus(order) {
     const pickupProofStatus = document.getElementById('pickup-proof-status');
     const deliveryProofStatus = document.getElementById('delivery-proof-status');
     const pickupForm = document.getElementById('pickup-proof-form');
-    const deliveryForm = document.getElementById('delivery-proof-form');
     const pickupSubmitBtn = document.getElementById('pickup-submit-btn');
-    const deliverySubmitBtn = document.getElementById('delivery-submit-btn');
 
     // Update pickup proof status
     if (order.pickup_proof_photo) {
@@ -509,7 +479,6 @@ function updateDeliveryProofStatus(order) {
                 </button>
             </div>
         `;
-        deliveryForm.classList.add('hidden');
     } else {
         deliveryProofStatus.innerHTML = `
             <div class="flex items-center p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -517,13 +486,6 @@ function updateDeliveryProofStatus(order) {
                 <p class="text-sm text-yellow-800">Belum ada bukti pengiriman paket</p>
             </div>
         `;
-        deliveryForm.classList.remove('hidden');
-
-        // Disable form if status doesn't allow delivery proof
-        if (!['assigned', 'picked_up', 'in_transit'].includes(order.status)) {
-            deliverySubmitBtn.disabled = true;
-            deliverySubmitBtn.classList.add('opacity-50', 'cursor-not-allowed');
-        }
     }
 }
 

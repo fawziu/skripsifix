@@ -179,12 +179,26 @@ class CustomerController extends Controller
                 ], 403);
             }
 
-            // Check if order is in awaiting_confirmation status
-            if ($order->status !== 'awaiting_confirmation') {
+            // Check if order is in allowed status for customer confirmation
+            if (!in_array($order->status, ['in_transit', 'awaiting_confirmation'])) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Pesanan tidak dalam status menunggu konfirmasi. Status saat ini: ' . $order->status
+                    'message' => 'Pesanan belum dapat dikonfirmasi. Status saat ini: ' . $order->status
                 ], 400);
+            }
+
+            // Handle optional receipt proof photo upload
+            if ($request->hasFile('delivery_proof_photo')) {
+                $request->validate([
+                    'delivery_proof_photo' => 'image|mimes:jpg,jpeg,png|max:2048',
+                    'notes' => 'nullable|string|max:500',
+                ]);
+
+                $photo = $request->file('delivery_proof_photo');
+                $path = $photo->store('orders/' . $order->id . '/delivery_proof', 'public');
+
+                $order->delivery_proof_photo = $path;
+                $order->delivery_proof_at = now();
             }
 
             // Update order status to delivered
@@ -197,7 +211,7 @@ class CustomerController extends Controller
             // Create status history
             $order->statusHistory()->create([
                 'status' => 'delivered',
-                'notes' => 'Customer mengonfirmasi barang telah diterima dengan baik',
+                'notes' => $request->get('notes') ? ('Customer: ' . $request->get('notes')) : 'Customer mengonfirmasi barang telah diterima dengan baik',
                 'updated_by' => $user->id
             ]);
 
