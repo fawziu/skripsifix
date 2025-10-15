@@ -116,9 +116,9 @@
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('city_id') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror">
                             <option value="">Pilih Kota</option>
                             @foreach($cities as $city)
-                                <option value="{{ $city['id'] }}" 
-                                        {{ old('city_id', $address->city_id) == $city['id'] ? 'selected' : '' }}>
-                                    {{ $city['name'] }} ({{ $city['type'] }})
+                                <option value="{{ is_array($city) ? $city['id'] : $city->id }}" 
+                                        {{ old('city_id', $address->city_id) == (is_array($city) ? $city['id'] : $city->id) ? 'selected' : '' }}>
+                                    {{ is_array($city) ? $city['name'] : $city->name }} ({{ is_array($city) ? ($city['type'] ?? '') : ($city->type ?? '') }})
                                 </option>
                             @endforeach
                         </select>
@@ -135,9 +135,9 @@
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('district_id') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror">
                             <option value="">Pilih Kecamatan</option>
                             @foreach($districts as $district)
-                                <option value="{{ $district['id'] }}" 
-                                        {{ old('district_id', $address->district_id) == $district['id'] ? 'selected' : '' }}>
-                                    {{ $district['name'] }}
+                                <option value="{{ is_array($district) ? $district['id'] : $district->id }}" 
+                                        {{ old('district_id', $address->district_id) == (is_array($district) ? $district['id'] : $district->id) ? 'selected' : '' }}>
+                                    {{ is_array($district) ? $district['name'] : $district->name }}
                                 </option>
                             @endforeach
                         </select>
@@ -145,29 +145,6 @@
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
-                </div>
-
-                <!-- Map Location -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Lokasi di Peta
-                    </label>
-                    <div id="map" class="h-96 w-full rounded-lg border border-gray-300 mb-2"></div>
-                    <div class="flex items-center space-x-4">
-                        <button type="button" onclick="getCurrentLocation()"
-                                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
-                            <i class="fas fa-location-arrow mr-2"></i>Gunakan Lokasi Saat Ini
-                        </button>
-                        <div id="locationLoading" class="hidden items-center text-sm text-gray-600">
-                            <i class="fas fa-spinner fa-spin mr-2"></i>
-                            Mendapatkan detail lokasi...
-                        </div>
-                    </div>
-
-                    <!-- Hidden coordinate inputs -->
-                    <input type="hidden" id="latitude" name="latitude" value="{{ old('latitude', $address->latitude) }}">
-                    <input type="hidden" id="longitude" name="longitude" value="{{ old('longitude', $address->longitude) }}">
-                    <input type="hidden" id="accuracy" name="accuracy" value="{{ old('accuracy', $address->accuracy) }}">
                 </div>
 
                 <!-- Address Details -->
@@ -225,22 +202,7 @@
 </div>
 
 @push('scripts')
-<!-- Leaflet CSS & JS for map picker -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="{{ asset('js/address-map.js') }}"></script>
 <script>
-// Initialize map with existing coordinates if available
-document.addEventListener('DOMContentLoaded', function() {
-    const lat = parseFloat(document.getElementById('latitude').value);
-    const lng = parseFloat(document.getElementById('longitude').value);
-    if (!isNaN(lat) && !isNaN(lng)) {
-        initMap('map', lat, lng);
-    } else {
-        initMap('map');
-    }
-});
-
 function addressForm() {
     return {
         loadCities() {

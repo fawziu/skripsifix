@@ -75,7 +75,7 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <div>
                     <label for="province_id" class="block text-sm font-medium text-gray-700 mb-2">Provinsi</label>
-                    <select id="province_id" name="province_id" @change="loadCities(); geocodeProvinceCenter();" 
+                    <select id="province_id" name="province_id" @change="loadCities()" 
                             class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         <option value="">Pilih Provinsi</option>
                         @foreach($provinces as $province)
@@ -117,10 +117,6 @@
                 <label class="block text-sm font-medium text-gray-700 mb-2">Lokasi di Peta</label>
                 <div id="map" class="h-96 w-full rounded-lg border border-gray-300 mb-2"></div>
                 <div class="flex items-center space-x-4">
-                    <button type="button" onclick="getCurrentLocation()" 
-                            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
-                        <i class="fas fa-location-arrow mr-2"></i>Gunakan Lokasi Saat Ini
-                    </button>
                     <div id="locationLoading" class="hidden items-center text-sm text-gray-600">
                         <i class="fas fa-spinner fa-spin mr-2"></i>
                         Mendapatkan detail lokasi...
@@ -190,9 +186,6 @@
 </div>
 
 @push('scripts')
-<!-- Leaflet CSS & JS for map picker -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="{{ asset('js/address-map.js') }}"></script>
 <script>
 function addressForm() {
@@ -215,13 +208,15 @@ function addressForm() {
             // Show loading
             citySelect.disabled = true;
             
+            // Use web route that returns { data: [...] }
             fetch(`/addresses/cities?province_id=${provinceId}`)
                 .then(response => response.json())
-                .then(cities => {
+                .then(resp => {
+                    const cities = resp.data || [];
                     cities.forEach(city => {
                         const option = document.createElement('option');
                         option.value = city.id;
-                        option.textContent = `${city.name} (${city.type})`;
+                        option.textContent = `${city.name} (${city.type || ''})`;
                         citySelect.appendChild(option);
                     });
                     citySelect.disabled = false;
@@ -244,9 +239,11 @@ function addressForm() {
             // Show loading
             districtSelect.disabled = true;
             
+            // Use web route that returns { data: [...] }
             fetch(`/addresses/districts?city_id=${cityId}`)
                 .then(response => response.json())
-                .then(districts => {
+                .then(resp => {
+                    const districts = resp.data || [];
                     districts.forEach(district => {
                         const option = document.createElement('option');
                         option.value = district.id;
@@ -259,25 +256,6 @@ function addressForm() {
                     console.error('Error loading districts:', error);
                     districtSelect.disabled = false;
                 });
-        },
-        geocodeProvinceCenter() {
-            const provinceSelect = document.getElementById('province_id');
-            const selected = provinceSelect.options[provinceSelect.selectedIndex];
-            if (!selected || !selected.text) return;
-            const name = selected.text.trim();
-            // Use Nominatim to get province center in Indonesia
-            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(name + ', Indonesia')}&limit=1`)
-                .then(r => r.json())
-                .then(results => {
-                    if (results && results.length > 0) {
-                        const lat = parseFloat(results[0].lat);
-                        const lon = parseFloat(results[0].lon);
-                        if (!isNaN(lat) && !isNaN(lon)) {
-                            updateMarkerPosition(lat, lon);
-                        }
-                    }
-                })
-                .catch(err => console.error('Geocode province failed:', err));
         }
     }
 }

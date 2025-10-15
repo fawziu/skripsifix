@@ -36,7 +36,8 @@ class AddressController extends Controller
      */
     public function create()
     {
-        $provinces = Province::active()->get();
+        // Restrict to local mapping provinces (Sulsel and Papua Barat)
+        $provinces = $this->localGeographicalService->getProvinces();
         return view('addresses.create', compact('provinces'));
     }
 
@@ -98,9 +99,10 @@ class AddressController extends Controller
                 ->with('error', 'Akses ditolak.');
         }
 
-        $provinces = Province::active()->get();
-        $cities = City::where('province_id', $address->province_id)->active()->get();
-        $districts = District::where('city_id', $address->city_id)->active()->get();
+        // Use local mapping data to ensure consistency with frontend mapping
+        $provinces = $this->localGeographicalService->getProvinces();
+        $cities = $this->localGeographicalService->getCities((int)$address->province_id);
+        $districts = $this->localGeographicalService->getDistricts((int)$address->city_id);
 
         return view('addresses.edit', compact('address', 'provinces', 'cities', 'districts'));
     }
@@ -219,10 +221,10 @@ class AddressController extends Controller
      */
     public function getCities(Request $request)
     {
-        $provinceId = $request->get('province_id');
-        $cities = City::where('province_id', $provinceId)->active()->get();
+        $provinceId = (int) $request->get('province_id');
+        $cities = $this->localGeographicalService->getCities($provinceId);
 
-        return response()->json($cities);
+        return response()->json(['data' => $cities]);
     }
 
     /**
@@ -230,10 +232,10 @@ class AddressController extends Controller
      */
     public function getDistricts(Request $request)
     {
-        $cityId = $request->get('city_id');
-        $districts = District::where('city_id', $cityId)->active()->get();
+        $cityId = (int) $request->get('city_id');
+        $districts = $this->localGeographicalService->getDistricts($cityId);
 
-        return response()->json($districts);
+        return response()->json(['data' => $districts]);
     }
 
     /**

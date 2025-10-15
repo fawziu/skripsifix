@@ -1,12 +1,25 @@
 let map;
 let marker;
+let allowPointPick = false;
 const defaultLocation = [-5.135399, 119.423790]; // Makassar
 
 function initMap(containerId, latitude = null, longitude = null) {
     // Initialize map
+    // If coords not provided, try hidden inputs
+    if ((latitude === null || longitude === null)) {
+        const latInput = document.getElementById('latitude');
+        const lngInput = document.getElementById('longitude');
+        const latVal = latInput && latInput.value ? parseFloat(latInput.value) : null;
+        const lngVal = lngInput && lngInput.value ? parseFloat(lngInput.value) : null;
+        if (!isNaN(latVal) && !isNaN(lngVal)) {
+            latitude = latVal;
+            longitude = lngVal;
+        }
+    }
+
     map = L.map(containerId).setView(
-        latitude && longitude ? [latitude, longitude] : defaultLocation,
-        13
+        (latitude !== null && longitude !== null) ? [latitude, longitude] : defaultLocation,
+        (latitude !== null && longitude !== null) ? 15 : 13
     );
 
     // Add OpenStreetMap tiles
@@ -15,15 +28,90 @@ function initMap(containerId, latitude = null, longitude = null) {
         attribution: '© OpenStreetMap contributors'
     }).addTo(map);
 
-    // Add marker if coordinates are provided
-    if (latitude && longitude) {
+    // Add marker if coordinates are provided (non-draggable)
+    if (latitude !== null && longitude !== null) {
         marker = L.marker([latitude, longitude], {
-            draggable: true
+            draggable: false
         }).addTo(map);
     }
 
-    // Handle map click
+    // If province or city selection exists on page, focus map accordingly
+    const provinceSelect = document.getElementById('province_id');
+    const citySelect = document.getElementById('city_id');
+    if (provinceSelect) {
+        provinceSelect.addEventListener('change', function() {
+            // Rough centroids for supported provinces
+            const provinceCenters = {
+                648: [-5.135399, 119.423790], // Sulawesi Selatan (Makassar)
+                546: [-0.861453, 134.062042], // Papua Barat (Manokwari vicinity)
+            };
+            const pid = parseInt(this.value, 10);
+            if (provinceCenters[pid]) {
+                map.setView(provinceCenters[pid], 8);
+            }
+            // Disable point picking and clear coordinates until city/district chosen
+            const latInput = document.getElementById('latitude');
+            const lngInput = document.getElementById('longitude');
+            if (latInput) latInput.value = '';
+            if (lngInput) lngInput.value = '';
+            allowPointPick = false;
+        });
+    }
+    if (citySelect) {
+        citySelect.addEventListener('change', async function() {
+            // Try to geocode the selected city to set map view and drop marker
+            const selectedOption = this.options[this.selectedIndex];
+            const cityName = selectedOption ? selectedOption.text : '';
+            const provinceName = (provinceSelect && provinceSelect.options[provinceSelect.selectedIndex]) ? provinceSelect.options[provinceSelect.selectedIndex].text : '';
+            if (!cityName) return;
+            try {
+                const query = `${cityName}, ${provinceName}, Indonesia`;
+                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+                const results = await res.json();
+                if (Array.isArray(results) && results.length > 0) {
+                    const lat = parseFloat(results[0].lat);
+                    const lon = parseFloat(results[0].lon);
+                    updateMarkerPosition(lat, lon);
+                }
+            } catch (e) {
+                // Silent fail if geocoding fails
+            }
+            // Disable point picking until district selected
+            allowPointPick = false;
+        });
+    }
+
+    // District change: refine coordinates using district + city + province
+    const districtSelect = document.getElementById('district_id');
+    if (districtSelect) {
+        districtSelect.addEventListener('change', async function() {
+            const districtOption = this.options[this.selectedIndex];
+            const districtName = districtOption ? districtOption.text : '';
+            const cityOption = citySelect && citySelect.options[citySelect.selectedIndex];
+            const cityName = cityOption ? cityOption.text : '';
+            const provinceName = (provinceSelect && provinceSelect.options[provinceSelect.selectedIndex]) ? provinceSelect.options[provinceSelect.selectedIndex].text : '';
+            if (!districtName) return;
+            try {
+                const query = `${districtName}, ${cityName}, ${provinceName}, Indonesia`;
+                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+                const results = await res.json();
+                if (Array.isArray(results) && results.length > 0) {
+                    const lat = parseFloat(results[0].lat);
+                    const lon = parseFloat(results[0].lon);
+                    updateMarkerPosition(lat, lon);
+                    map.setView([lat, lon], 15);
+                }
+            } catch (e) {
+                // Silent fail
+            }
+            // Enable point picking after full selection
+            allowPointPick = true;
+        });
+    }
+
+    // Conditional map click: only active when province, city, and district selected
     map.on('click', function(e) {
+        if (!allowPointPick) return;
         updateMarkerPosition(e.latlng.lat, e.latlng.lng);
     });
 }
@@ -36,23 +124,19 @@ async function updateMarkerPosition(lat, lng, accuracy = null) {
         document.getElementById('accuracy').value = accuracy;
     }
 
-    // Update or create marker
+    // Update or create marker (non-draggable)
     if (marker) {
         marker.setLatLng([lat, lng]);
     } else {
         marker = L.marker([lat, lng], {
-            draggable: true
+            draggable: false
         }).addTo(map);
     }
 
     // Center map on marker
     map.setView([lat, lng]);
 
-    // Update marker drag event
-    marker.on('dragend', function(e) {
-        const position = e.target.getLatLng();
-        updateMarkerPosition(position.lat, position.lng);
-    });
+    // Dragging disabled; coordinates set only via selections/geocoding
 
     // Get address details using Nominatim
     try {
