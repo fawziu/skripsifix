@@ -28,6 +28,9 @@ function initMap(containerId, latitude = null, longitude = null) {
         attribution: '© OpenStreetMap contributors'
     }).addTo(map);
 
+    // Prevent page scroll from zooming the map
+    map.scrollWheelZoom.disable();
+
     // Add marker if coordinates are provided (non-draggable)
     if (latitude !== null && longitude !== null) {
         marker = L.marker([latitude, longitude], {
@@ -99,7 +102,17 @@ function initMap(containerId, latitude = null, longitude = null) {
                     const lat = parseFloat(results[0].lat);
                     const lon = parseFloat(results[0].lon);
                     updateMarkerPosition(lat, lon);
-                    map.setView([lat, lon], 15);
+                    // Prefer fitting the district bounds if available; otherwise zoom in close
+                    if (results[0].boundingbox && results[0].boundingbox.length === 4) {
+                        const [south, north, west, east] = results[0].boundingbox.map(parseFloat);
+                        const bounds = L.latLngBounds([
+                            [south, west],
+                            [north, east]
+                        ]);
+                        map.fitBounds(bounds, { padding: [20, 20] });
+                    } else {
+                        map.setView([lat, lon], 17);
+                    }
                 }
             } catch (e) {
                 // Silent fail
@@ -138,70 +151,28 @@ async function updateMarkerPosition(lat, lng, accuracy = null) {
 
     // Dragging disabled; coordinates set only via selections/geocoding
 
-    // Get address details using Nominatim
+    // Get address details using Nominatim (fill address line and postal code only)
     try {
         const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`);
         const data = await response.json();
         
         if (data.address) {
-            // Update address fields
             const address = data.address;
-            
-            // Update address line
+
             let addressLine = '';
             if (address.road) addressLine += `Jl. ${address.road}`;
             if (address.house_number) addressLine += ` No. ${address.house_number}`;
             if (address.suburb) addressLine += `, ${address.suburb}`;
             if (addressLine) {
-                document.getElementById('address_line').value = addressLine;
-            }
-
-            // Update postal code if available
-            if (address.postcode) {
-                document.getElementById('postal_code').value = address.postcode;
-            }
-
-            // Try to match and select province
-            if (address.state) {
-                const provinceSelect = document.getElementById('province_id');
-                for (let i = 0; i < provinceSelect.options.length; i++) {
-                    if (provinceSelect.options[i].text.toLowerCase().includes(address.state.toLowerCase())) {
-                        provinceSelect.value = provinceSelect.options[i].value;
-                        // Trigger change event to load cities
-                        provinceSelect.dispatchEvent(new Event('change'));
-                        
-                        // Wait for cities to load then try to select the city
-                        setTimeout(async () => {
-                            const citySelect = document.getElementById('city_id');
-                            if (address.city || address.town || address.municipality) {
-                                const cityName = address.city || address.town || address.municipality;
-                                for (let j = 0; j < citySelect.options.length; j++) {
-                                    if (citySelect.options[j].text.toLowerCase().includes(cityName.toLowerCase())) {
-                                        citySelect.value = citySelect.options[j].value;
-                                        // Trigger change event to load districts
-                                        citySelect.dispatchEvent(new Event('change'));
-                                        
-                                        // Wait for districts to load then try to select the district
-                                        setTimeout(() => {
-                                            const districtSelect = document.getElementById('district_id');
-                                            if (address.suburb || address.district) {
-                                                const districtName = address.suburb || address.district;
-                                                for (let k = 0; k < districtSelect.options.length; k++) {
-                                                    if (districtSelect.options[k].text.toLowerCase().includes(districtName.toLowerCase())) {
-                                                        districtSelect.value = districtSelect.options[k].value;
-                                                        break;
-                                                    }
-                                                }
-                                            }
-                                        }, 1000);
-                                        break;
-                                    }
-                                }
-                            }
-                        }, 1000);
-                        break;
-                    }
+                const addressInput = document.getElementById('address_line');
+                if (addressInput && !addressInput.value) {
+                    addressInput.value = addressLine;
                 }
+            }
+
+            if (address.postcode) {
+                const postalInput = document.getElementById('postal_code');
+                if (postalInput) postalInput.value = address.postcode;
             }
         }
     } catch (error) {

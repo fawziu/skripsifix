@@ -147,6 +147,16 @@
                     </div>
                 </div>
 
+                <!-- Map Location -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Lokasi di Peta</label>
+                    <div id="map" class="h-96 w-full rounded-lg border border-gray-300 mb-2"></div>
+                    <!-- Hidden coordinate inputs -->
+                    <input type="hidden" id="latitude" name="latitude" value="{{ old('latitude', $address->latitude) }}">
+                    <input type="hidden" id="longitude" name="longitude" value="{{ old('longitude', $address->longitude) }}">
+                    <input type="hidden" id="accuracy" name="accuracy" value="{{ old('accuracy', $address->accuracy) }}">
+                </div>
+
                 <!-- Address Details -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
@@ -202,6 +212,7 @@
 </div>
 
 @push('scripts')
+<script src="{{ asset('js/address-map.js') }}"></script>
 <script>
 function addressForm() {
     return {
@@ -250,6 +261,17 @@ function addressForm() {
         }
     }
 }
+
+// Initialize map on edit with existing coordinates
+setTimeout(() => {
+    const latVal = parseFloat(document.getElementById('latitude').value);
+    const lngVal = parseFloat(document.getElementById('longitude').value);
+    if (!isNaN(latVal) && !isNaN(lngVal)) {
+        initMap('map', latVal, lngVal);
+    } else {
+        initMap('map');
+    }
+}, 100);
 </script>
 @endpush
 @endsection
