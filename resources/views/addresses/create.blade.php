@@ -75,7 +75,7 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <div>
                     <label for="province_id" class="block text-sm font-medium text-gray-700 mb-2">Provinsi</label>
-                    <select id="province_id" name="province_id" @change="loadCities()" 
+                    <select id="province_id" name="province_id" @change="loadCities(); geocodeProvinceCenter();" 
                             class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         <option value="">Pilih Provinsi</option>
                         @foreach($provinces as $province)
@@ -190,6 +190,9 @@
 </div>
 
 @push('scripts')
+<!-- Leaflet CSS & JS for map picker -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="{{ asset('js/address-map.js') }}"></script>
 <script>
 function addressForm() {
@@ -256,6 +259,25 @@ function addressForm() {
                     console.error('Error loading districts:', error);
                     districtSelect.disabled = false;
                 });
+        },
+        geocodeProvinceCenter() {
+            const provinceSelect = document.getElementById('province_id');
+            const selected = provinceSelect.options[provinceSelect.selectedIndex];
+            if (!selected || !selected.text) return;
+            const name = selected.text.trim();
+            // Use Nominatim to get province center in Indonesia
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(name + ', Indonesia')}&limit=1`)
+                .then(r => r.json())
+                .then(results => {
+                    if (results && results.length > 0) {
+                        const lat = parseFloat(results[0].lat);
+                        const lon = parseFloat(results[0].lon);
+                        if (!isNaN(lat) && !isNaN(lon)) {
+                            updateMarkerPosition(lat, lon);
+                        }
+                    }
+                })
+                .catch(err => console.error('Geocode province failed:', err));
         }
     }
 }
