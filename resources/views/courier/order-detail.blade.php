@@ -67,9 +67,9 @@
             </div>
         </div>
 
-        <!-- Delivery Proof Upload -->
+        <!-- Delivery Proof Upload / Receipt Proof Display -->
         <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Bukti Pengiriman</h3>
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Bukti Penerimaan</h3>
 
             <!-- Pickup Proof Upload -->
             <div class="mb-6 p-4 border border-gray-200 rounded-lg">
@@ -112,11 +112,11 @@
                 </form>
             </div>
 
-        <!-- Delivery Proof (status only, form removed per requirements) -->
+        <!-- Receipt Proof (status only, form removed per requirements) -->
         <div class="p-4 border border-gray-200 rounded-lg">
-            <h4 class="text-md font-medium text-gray-900 mb-3">Bukti Pengiriman Paket</h4>
+            <h4 class="text-md font-medium text-gray-900 mb-3">Bukti Penerimaan Paket</h4>
             <div id="delivery-proof-status" class="mb-2"></div>
-            <p class="text-xs text-gray-500">Upload bukti pengiriman kini dilakukan oleh customer saat konfirmasi penerimaan.</p>
+            <p class="text-xs text-gray-500">Upload bukti penerimaan dilakukan oleh customer saat konfirmasi penerimaan.</p>
         </div>
         </div>
 
@@ -250,7 +250,13 @@ function displayOrderDetail(data) {
         </div>
         <div>
             <span class="text-sm font-medium text-gray-600">Origin Address:</span>
-            <p class="text-sm text-gray-900 mt-1">${data.order.origin_address}</p>
+            <p class="text-sm text-gray-900 mt-1">
+                <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(data.order.origin_address)}"
+                   target="_blank" rel="noopener"
+                   class="text-blue-600 hover:underline break-words">
+                    ${data.order.origin_address}
+                </a>
+            </p>
         </div>
         <div>
             <span class="text-sm font-medium text-gray-600">Destination Address:</span>

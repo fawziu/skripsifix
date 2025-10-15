@@ -425,6 +425,16 @@
                                         </button>
                                     </div>
                                     <p class="text-xs text-gray-500 mt-1">Format: JPG, PNG. Maksimal 2MB</p>
+                                    <!-- Preview gambar bukti penerimaan -->
+                                    <div id="receipt-preview" class="mt-3 hidden">
+                                        <div class="inline-flex items-center space-x-3 p-2 border border-gray-200 rounded-lg bg-gray-50">
+                                            <img id="receipt-preview-img" alt="Preview Bukti Penerimaan" class="max-h-40 rounded" />
+                                            <button type="button" id="receipt-preview-clear"
+                                                    class="text-red-600 text-sm hover:underline">
+                                                Hapus
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Catatan (Opsional)</label>
@@ -564,6 +574,41 @@ document.addEventListener('DOMContentLoaded', function() {
     const trackingInfo = document.getElementById('tracking-info');
     if (trackingInfo) {
         loadTrackingInfo();
+    }
+    // Setup preview untuk bukti penerimaan oleh customer
+    setupReceiptPreview();
+    // Wire the customer receipt proof form to submit via confirmDelivery()
+    const receiptForm = document.getElementById('customer-receipt-proof-form');
+    if (receiptForm) {
+        receiptForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            confirmDelivery();
+        });
+    }
+
+    // Jika sudah ada delivery_proof_photo dari server, tampilkan preview dan disable input/button
+    const existingProof = @json($order->delivery_proof_photo);
+    if (existingProof) {
+        const previewWrapper = document.getElementById('receipt-preview');
+        const previewImg = document.getElementById('receipt-preview-img');
+        const fileInput = document.getElementById('receipt_proof_photo');
+        // Ambil tombol kamera di container yang sama dengan input file (menghindari selector dengan kutip bersarang)
+        const cameraBtn = fileInput && fileInput.parentElement ? fileInput.parentElement.querySelector('button') : null;
+        const submitBtn = document.getElementById('receipt-submit-btn');
+
+        if (previewWrapper && previewImg) {
+            previewImg.src = `/storage/${existingProof}`;
+            previewWrapper.classList.remove('hidden');
+        }
+        if (fileInput) fileInput.disabled = true;
+        if (cameraBtn) cameraBtn.disabled = true;
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+
+        const clearBtn = document.getElementById('receipt-preview-clear');
+        if (clearBtn) clearBtn.classList.add('hidden');
     }
 });
 
@@ -956,6 +1001,54 @@ function viewProofPhoto(photoPath, title) {
             modal.remove();
         }
     });
+}
+
+// Setup preview gambar untuk bukti penerimaan customer
+function setupReceiptPreview() {
+    const fileInput = document.getElementById('receipt_proof_photo');
+    const previewWrapper = document.getElementById('receipt-preview');
+    const previewImg = document.getElementById('receipt-preview-img');
+    const clearBtn = document.getElementById('receipt-preview-clear');
+
+    if (!fileInput || !previewWrapper || !previewImg || !clearBtn) return;
+
+    fileInput.addEventListener('change', function() {
+        const file = this.files && this.files[0];
+        if (!file) {
+            hideReceiptPreview();
+            return;
+        }
+
+        // Validasi tipe dan ukuran file (max 2MB)
+        const validTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+        const maxBytes = 2 * 1024 * 1024;
+        if (!validTypes.includes(file.type)) {
+            alert('Format gambar harus JPG atau PNG');
+            this.value = '';
+            hideReceiptPreview();
+            return;
+        }
+        if (file.size > maxBytes) {
+            alert('Ukuran gambar maksimal 2MB');
+            this.value = '';
+            hideReceiptPreview();
+            return;
+        }
+
+        const objectUrl = URL.createObjectURL(file);
+        previewImg.src = objectUrl;
+        previewWrapper.classList.remove('hidden');
+    });
+
+    clearBtn.addEventListener('click', function() {
+        fileInput.value = '';
+        hideReceiptPreview();
+    });
+
+    function hideReceiptPreview() {
+        previewImg.removeAttribute('src');
+        previewWrapper.classList.add('hidden');
+    }
 }
 </script>
 @endpush

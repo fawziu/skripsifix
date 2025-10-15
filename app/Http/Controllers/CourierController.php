@@ -289,6 +289,11 @@ class CourierController extends Controller
                     'total_amount' => $order->total_amount,
                     'shipping_method' => $order->shipping_method,
                     'courier_service' => $order->courier_service,
+                    // Include proof photos and timestamps so the courier view can render them
+                    'pickup_proof_photo' => $order->pickup_proof_photo,
+                    'pickup_proof_at' => $order->pickup_proof_at ? $order->pickup_proof_at->format('d M Y H:i') : null,
+                    'delivery_proof_photo' => $order->delivery_proof_photo,
+                    'delivery_proof_at' => $order->delivery_proof_at ? $order->delivery_proof_at->format('d M Y H:i') : null,
                     'created_at' => $order->created_at->format('d M Y H:i'),
                     'updated_at' => $order->updated_at->format('d M Y H:i')
                 ],

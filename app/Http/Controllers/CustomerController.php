@@ -9,6 +9,7 @@ use App\Services\WhatsAppNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class CustomerController extends Controller
@@ -171,6 +172,13 @@ class CustomerController extends Controller
         try {
             $user = Auth::user();
 
+            Log::info('Customer confirmDelivery called', [
+                'order_id' => $order->id,
+                'customer_id' => $user ? $user->id : null,
+                'order_status' => $order->status,
+                'has_file' => $request->hasFile('delivery_proof_photo'),
+            ]);
+
             // Check if user is the customer of this order
             if ($order->customer_id !== $user->id) {
                 return response()->json([
@@ -181,14 +189,31 @@ class CustomerController extends Controller
 
             // Check if order is in allowed status for customer confirmation
             if (!in_array($order->status, ['in_transit', 'awaiting_confirmation'])) {
+                Log::warning('confirmDelivery rejected due to status', [
+                    'order_id' => $order->id,
+                    'status' => $order->status,
+                ]);
                 return response()->json([
                     'success' => false,
                     'message' => 'Pesanan belum dapat dikonfirmasi. Status saat ini: ' . $order->status
                 ], 400);
             }
 
+            
+            // Prepare fields to update
+            $updateData = [
+                'status' => 'delivered',
+                'delivered_at' => now(),
+                'delivered_by' => $user->id,
+            ];
+
             // Handle optional receipt proof photo upload
             if ($request->hasFile('delivery_proof_photo')) {
+                Log::info('confirmDelivery received delivery_proof_photo', [
+                    'order_id' => $order->id,
+                    'mime' => $request->file('delivery_proof_photo')->getMimeType(),
+                    'size' => $request->file('delivery_proof_photo')->getSize(),
+                ]);
                 $request->validate([
                     'delivery_proof_photo' => 'image|mimes:jpg,jpeg,png|max:2048',
                     'notes' => 'nullable|string|max:500',
@@ -197,15 +222,20 @@ class CustomerController extends Controller
                 $photo = $request->file('delivery_proof_photo');
                 $path = $photo->store('orders/' . $order->id . '/delivery_proof', 'public');
 
-                $order->delivery_proof_photo = $path;
-                $order->delivery_proof_at = now();
+                $updateData['delivery_proof_photo'] = $path;
+                $updateData['delivery_proof_at'] = now();
+
+                Log::info('confirmDelivery stored delivery_proof', [
+                    'order_id' => $order->id,
+                    'stored_path' => $path,
+                ]);
             }
 
-            // Update order status to delivered
-            $order->update([
-                'status' => 'delivered',
-                'delivered_at' => now(),
-                'delivered_by' => $user->id
+            // Persist all changes at once
+            $order->update($updateData);
+
+            Log::info('confirmDelivery order updated to delivered', [
+                'order_id' => $order->id,
             ]);
 
             // Create status history
@@ -217,6 +247,11 @@ class CustomerController extends Controller
 
             // Generate WhatsApp notification link for courier
             $whatsappLink = $this->whatsappService->generateDeliveryConfirmationLink($order, $user);
+
+            Log::info('confirmDelivery success', [
+                'order_id' => $order->id,
+                'whatsapp_link' => $whatsappLink,
+            ]);
 
             return response()->json([
                 'success' => true,
@@ -230,6 +265,11 @@ class CustomerController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            Log::error('confirmDelivery failed', [
+                'order_id' => $order->id ?? null,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal mengonfirmasi penerimaan pesanan: ' . $e->getMessage()
