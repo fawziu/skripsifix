@@ -1,0 +1,2 @@
+api_key_telegram = ab50d6b6db140bf3b79045ec615d3c6e
+bot_key = 8384394859:AAFU4RVQAH4LLX6HBNep0iYWadKX_2ei43c

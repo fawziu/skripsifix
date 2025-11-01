@@ -275,6 +275,9 @@
                             <span class="ml-3 text-gray-600">Memuat informasi tracking...</span>
                         </div>
                     </div>
+                    <div id="tracking-map-wrapper" class="bg-gray-50 rounded-lg p-2">
+                        <div id="tracking-map" style="height: 320px; border-radius: 0.5rem;"></div>
+                    </div>
                 </div>
             </div>
             @endif
@@ -575,6 +578,11 @@ document.addEventListener('DOMContentLoaded', function() {
     if (trackingInfo) {
         loadTrackingInfo();
     }
+    // Initialize tracking map if present
+    const trackingMapEl = document.getElementById('tracking-map');
+    if (trackingMapEl) {
+        initTrackingMap();
+    }
     // Setup preview untuk bukti penerimaan oleh customer
     setupReceiptPreview();
     // Wire the customer receipt proof form to submit via confirmDelivery()
@@ -668,6 +676,9 @@ function displayTrackingInfo(trackingData) {
             </div>
         `;
     }
+
+    // Update tracking map regardless of manifest availability
+    updateTrackingMap(trackingData);
 }
 
 function showTrackingError(message) {
@@ -678,6 +689,78 @@ function showTrackingError(message) {
             <p class="text-sm">${message}</p>
         </div>
     `;
+
+    // Even on error, try to show destination map marker as fallback
+    updateTrackingMap(null);
+}
+// Tracking map helpers (Leaflet)
+let trackingMap;
+let trackingMarker;
+function initTrackingMap() {
+    if (typeof L === 'undefined') {
+        return; // Leaflet not loaded via layout
+    }
+    const mapEl = document.getElementById('tracking-map');
+    if (!mapEl) return;
+    trackingMap = L.map('tracking-map').setView([ -2.5, 119.0 ], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(trackingMap);
+}
+
+function updateTrackingMap(trackingData) {
+    if (!trackingMap || typeof L === 'undefined') return;
+
+    // Try to get latest location from tracking data
+    let lat = null, lng = null;
+    if (trackingData && trackingData.manifest && trackingData.manifest.length > 0) {
+        const latest = trackingData.manifest[0];
+        if (latest.city_name) {
+            geocodeToMap(latest.city_name);
+            return;
+        }
+    }
+
+    // Fallback: use destination coordinates from server if available
+    const destLat = @json($order->destination_latitude);
+    const destLng = @json($order->destination_longitude);
+    if (destLat && destLng) {
+        lat = destLat;
+        lng = destLng;
+    }
+
+    if (lat !== null && lng !== null) {
+        setTrackingMarker(lat, lng, 'Lokasi Tujuan');
+        trackingMap.setView([lat, lng], 14);
+    }
+}
+
+async function geocodeToMap(place) {
+    try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(place + ', Indonesia')}`);
+        const results = await res.json();
+        if (Array.isArray(results) && results.length > 0) {
+            const lat = parseFloat(results[0].lat);
+            const lon = parseFloat(results[0].lon);
+            setTrackingMarker(lat, lon, place);
+            trackingMap.setView([lat, lon], 12);
+        }
+    } catch (e) {
+        // ignore
+    }
+}
+
+function setTrackingMarker(lat, lng, label) {
+    if (trackingMarker) {
+        trackingMarker.setLatLng([lat, lng]);
+    } else {
+        trackingMarker = L.marker([lat, lng]);
+        trackingMarker.addTo(trackingMap);
+    }
+    if (label) {
+        trackingMarker.bindPopup(label).openPopup();
+    }
 }
 
 // Admin tracking functions
@@ -963,8 +1046,14 @@ function confirmDelivery() {
                     alert(message);
                 }
 
-                // Reload page to show updated status
-                window.location.reload();
+                // Redirect to tracking centered on destination if coordinates are available
+                const destLat = @json($order->destination_latitude);
+                const destLng = @json($order->destination_longitude);
+                if (destLat && destLng) {
+                    window.location.href = `/orders/{{ $order->id }}/tracking?focus=destination&lat=${destLat}&lng=${destLng}`;
+                } else {
+                    window.location.reload();
+                }
             } else {
                 alert('Gagal mengonfirmasi penerimaan: ' + data.message);
             }

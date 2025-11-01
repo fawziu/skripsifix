@@ -13,11 +13,24 @@ class OrderService
 {
     private RajaOngkirService $rajaOngkirService;
     private WhatsAppNotificationService $whatsappService;
+    private TelegramService $telegramService;
+    private ?TelegramClientService $telegramClientService;
 
-    public function __construct(RajaOngkirService $rajaOngkirService, WhatsAppNotificationService $whatsappService)
-    {
+    public function __construct(
+        RajaOngkirService $rajaOngkirService, 
+        WhatsAppNotificationService $whatsappService, 
+        TelegramService $telegramService
+    ) {
         $this->rajaOngkirService = $rajaOngkirService;
         $this->whatsappService = $whatsappService;
+        $this->telegramService = $telegramService;
+        
+        // Always try to inject TelegramClientService if available
+        try {
+            $this->telegramClientService = app(TelegramClientService::class);
+        } catch (\Throwable $e) {
+            $this->telegramClientService = null;
+        }
     }
 
     /**
@@ -139,6 +152,20 @@ class OrderService
             // Generate WhatsApp notification link
             $whatsappLink = $this->whatsappService->generateOrderConfirmationLink($order, $admin);
 
+            // Send Telegram notification via Client API (from personal account)
+            // Wrap in try-catch to prevent Telegram errors from breaking the order update
+            if ($this->telegramClientService && $this->telegramClientService->isConfigured()) {
+                try {
+                    $this->telegramClientService->sendOrderStatusUpdate($order, 'confirmed', $admin);
+                } catch (\Throwable $telegramError) {
+                    // Log error but don't fail the order update
+                    Log::warning('Telegram notification failed during order confirmation', [
+                        'order_id' => $order->id,
+                        'error' => $telegramError->getMessage()
+                    ]);
+                }
+            }
+
             DB::commit();
 
             return [
@@ -176,6 +203,20 @@ class OrderService
 
             // Generate WhatsApp notification link
             $whatsappLink = $this->whatsappService->generateCourierAssignmentLink($order, $courier);
+
+            // Send Telegram notification via Client API (from personal account)
+            // Wrap in try-catch to prevent Telegram errors from breaking the order update
+            if ($this->telegramClientService && $this->telegramClientService->isConfigured()) {
+                try {
+                    $this->telegramClientService->sendOrderStatusUpdate($order, 'assigned', $admin);
+                } catch (\Throwable $telegramError) {
+                    // Log error but don't fail the order update
+                    Log::warning('Telegram notification failed during courier assignment', [
+                        'order_id' => $order->id,
+                        'error' => $telegramError->getMessage()
+                    ]);
+                }
+            }
 
             DB::commit();
 
@@ -217,6 +258,51 @@ class OrderService
 
             // Generate WhatsApp notification link
             $whatsappLink = $this->whatsappService->generateNotificationLink($order, $status, $user);
+
+            // Send Telegram notification via Client API only
+            // Wrap in try-catch to prevent Telegram errors from breaking the order update
+            if ($this->telegramClientService && $this->telegramClientService->isConfigured()) {
+                // Remember output buffer level before Telegram call
+                $obLevelBeforeTelegram = ob_get_level();
+                
+                try {
+                    $result = $this->telegramClientService->sendOrderStatusUpdate($order, $status, $user);
+                    
+                    if ($result) {
+                        Log::info('Telegram notification sent successfully via OrderService', [
+                            'order_id' => $order->id,
+                            'status' => $status
+                        ]);
+                    } else {
+                        Log::warning('Telegram notification returned false', [
+                            'order_id' => $order->id,
+                            'status' => $status
+                        ]);
+                    }
+                    
+                    // Restore output buffer level (TelegramClientService manages its own buffers)
+                    while (ob_get_level() > $obLevelBeforeTelegram) {
+                        @ob_end_clean();
+                    }
+                } catch (\Throwable $telegramError) {
+                    // Log error but don't fail the order update
+                    Log::warning('Telegram notification failed during order status update', [
+                        'order_id' => $order->id,
+                        'error' => $telegramError->getMessage(),
+                        'trace' => $telegramError->getTraceAsString()
+                    ]);
+                    
+                    // Restore output buffer level even on error
+                    while (ob_get_level() > $obLevelBeforeTelegram) {
+                        @ob_end_clean();
+                    }
+                }
+            } else {
+                Log::info('Telegram Client Service not configured or not available', [
+                    'order_id' => $order->id,
+                    'is_configured' => $this->telegramClientService ? $this->telegramClientService->isConfigured() : false
+                ]);
+            }
 
             DB::commit();
 

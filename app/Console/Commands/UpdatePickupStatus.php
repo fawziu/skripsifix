@@ -245,6 +245,18 @@ class UpdatePickupStatus extends Command
             $triggerUser = User::find(1) ?? $order->admin ?? $order->customer;
             $whatsappLink = $this->whatsappService->generateStatusNotificationLink($order, 'picked_up', $triggerUser);
 
+            // Send Telegram notification via Client API
+            if ($this->telegramClientService && $this->telegramClientService->isConfigured()) {
+                try {
+                    $this->telegramClientService->sendOrderStatusUpdate($order, 'picked_up', $triggerUser);
+                } catch (\Throwable $telegramError) {
+                    Log::warning('Telegram notification failed in auto-pickup', [
+                        'order_id' => $order->id,
+                        'error' => $telegramError->getMessage()
+                    ]);
+                }
+            }
+
             // Log the update
             Log::info('Automatic pickup status update', [
                 'order_id' => $order->id,

@@ -59,15 +59,15 @@ class OrderSeeder extends Seeder
 
         $shippingMethods = ['manual', 'rajaongkir'];
         $paymentMethods = ['cod', 'transfer'];
-        $statuses = ['pending', 'confirmed', 'assigned', 'picked_up', 'in_transit', 'delivered'];
+        // Tidak perlu statuses karena semua akan pending
 
         $orderCount = 0;
         $manualOrderCount = 0;
         $rajaOngkirOrderCount = 0;
 
         foreach ($customers as $customer) {
-            // Create 4-10 orders per customer dengan distribusi yang seimbang
-            $numOrders = rand(4, 10);
+            // Create 15-25 orders per customer (banyak order)
+            $numOrders = rand(15, 25);
 
             for ($i = 0; $i < $numOrders; $i++) {
                 // Pastikan distribusi 50-50 antara manual dan raja ongkir
@@ -105,22 +105,11 @@ class OrderSeeder extends Seeder
                 $serviceFee = $this->getServiceFee($shippingMethod);
                 $totalAmount = $itemPrice + $shippingCost + $serviceFee;
 
-                // Determine status and assign courier/admin accordingly
-                $status = $this->getRealisticStatus();
-                $courierId = null;
-                $adminId = null;
-
-                if ($status === 'pending') {
-                    // No courier or admin assigned yet
-                } elseif (in_array($status, ['confirmed', 'assigned'])) {
-                    $adminId = $admins->isNotEmpty() ? $admins->random()->id : null;
-                    if ($status === 'assigned' && $couriers->isNotEmpty()) {
-                        $courierId = $couriers->random()->id;
-                    }
-                } elseif (in_array($status, ['picked_up', 'in_transit', 'delivered'])) {
-                    $adminId = $admins->isNotEmpty() ? $admins->random()->id : null;
-                    $courierId = $couriers->isNotEmpty() ? $couriers->random()->id : null;
-                }
+                // SEMUA ORDER STATUS AWAL: hanya 'pending'
+                // Tapi semua order di-assign ke kurir pertama
+                $status = 'pending';
+                $courierId = $couriers->isNotEmpty() ? $couriers->first()->id : null; // Assign ke kurir pertama
+                $adminId = null; // Belum ada admin yang konfirmasi
 
                 $order = Order::create([
                     'order_number' => $this->generateOrderNumber(),
@@ -142,14 +131,14 @@ class OrderSeeder extends Seeder
                     'courier_service' => $shippingMethod === 'rajaongkir' ? $this->getRandomCourierService() : null,
                     'tracking_number' => $shippingMethod === 'rajaongkir' ? $this->generateTrackingNumber() : null,
                     'status' => $status,
-                    'estimated_delivery' => $this->getEstimatedDelivery($status),
+                    'estimated_delivery' => null, // Tidak ada estimated delivery untuk pending
                     'rajaongkir_response' => $shippingMethod === 'rajaongkir' ? $this->getRajaOngkirResponse() : null,
                     'created_at' => $this->getRandomDate(),
                     'updated_at' => $this->getRandomDate(),
                 ]);
 
-                // Create order status history
-                $this->createOrderStatusHistory($order, $status, $adminId);
+                // Create order status history - hanya status pending (status awal)
+                $this->createOrderStatusHistory($order, $status, $customer->id); // Updated by customer
                 $orderCount++;
             }
         }
@@ -372,23 +361,20 @@ class OrderSeeder extends Seeder
 
     /**
      * Create order status history
+     * Untuk status awal, hanya buat history pending saja (tidak ada update status)
      */
-    private function createOrderStatusHistory(Order $order, string $currentStatus, ?int $adminId): void
+    private function createOrderStatusHistory(Order $order, string $currentStatus, ?int $userId): void
     {
-        $statuses = ['pending', 'confirmed', 'assigned', 'picked_up', 'in_transit', 'delivered'];
-        $currentIndex = array_search($currentStatus, $statuses);
-
-        for ($i = 0; $i <= $currentIndex; $i++) {
-            $status = $statuses[$i];
-            $createdAt = $order->created_at->addHours($i * 2);
-
+        // Hanya buat history untuk status pending (status awal)
+        // Tidak ada history update karena semua order masih pending
+        if ($currentStatus === 'pending') {
             OrderStatus::create([
                 'order_id' => $order->id,
-                'status' => $status,
-                'notes' => $this->getStatusNotes($status),
-                'updated_by' => $adminId ?? $order->customer_id,
-                'created_at' => $createdAt,
-                'updated_at' => $createdAt,
+                'status' => 'pending',
+                'notes' => 'Pesanan telah dibuat dan menunggu konfirmasi',
+                'updated_by' => $userId ?? $order->customer_id,
+                'created_at' => $order->created_at,
+                'updated_at' => $order->created_at,
             ]);
         }
     }

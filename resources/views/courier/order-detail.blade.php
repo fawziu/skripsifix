@@ -197,25 +197,43 @@ function loadOrderDetail() {
     const orderDetailContent = document.getElementById('order-detail-content');
 
     // Show loading
-    loadingState.classList.remove('hidden');
-    errorState.classList.add('hidden');
-    orderDetailContent.classList.add('hidden');
+    if (loadingState) loadingState.classList.remove('hidden');
+    if (errorState) errorState.classList.add('hidden');
+    if (orderDetailContent) orderDetailContent.classList.add('hidden');
 
     fetch(`/courier/orders/${currentOrderId}/api`)
-        .then(response => response.json())
+        .then(response => {
+            // Check if response is actually JSON before parsing
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                return response.text().then(text => {
+                    // Try to extract JSON from response if it's mixed with other output
+                    const jsonMatch = text.match(/\{[\s\S]*\}/);
+                    if (jsonMatch) {
+                        try {
+                            return JSON.parse(jsonMatch[0]);
+                        } catch (e) {
+                            throw new Error('Invalid JSON in response: ' + text.substring(0, 200));
+                        }
+                    }
+                    throw new Error('Response is not JSON: ' + text.substring(0, 200));
+                });
+            }
+            return response.json();
+        })
         .then(data => {
-            loadingState.classList.add('hidden');
+            if (loadingState) loadingState.classList.add('hidden');
 
-            if (data.success) {
+            if (data && data.success) {
                 displayOrderDetail(data.data);
             } else {
-                showError(data.message || 'Gagal memuat detail pesanan');
+                showError(data?.message || 'Gagal memuat detail pesanan');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            loadingState.classList.add('hidden');
-            showError('Terjadi kesalahan saat memuat detail pesanan');
+            if (loadingState) loadingState.classList.add('hidden');
+            showError('Terjadi kesalahan saat memuat detail pesanan: ' + error.message);
         });
 }
 
@@ -227,6 +245,11 @@ function displayOrderDetail(data) {
 
     // Update delivery proof status
     updateDeliveryProofStatus(data.order);
+    // Update tracking link to include destination focus if coordinates are available
+    const trackingLink = document.getElementById('open-tracking-link');
+    if (trackingLink && data.order && data.order.destination_latitude && data.order.destination_longitude) {
+        trackingLink.href = `/orders/${currentOrderId}/tracking?focus=destination&lat=${data.order.destination_latitude}&lng=${data.order.destination_longitude}`;
+    }
 
     // Display order info
     orderInfo.innerHTML = `
@@ -366,7 +389,9 @@ function getStatusText(status) {
 }
 
 // Handle status update form submission
-document.getElementById('status-update-form').addEventListener('submit', function(e) {
+const statusUpdateForm = document.getElementById('status-update-form');
+if (statusUpdateForm) {
+    statusUpdateForm.addEventListener('submit', function(e) {
     e.preventDefault();
 
     const status = document.getElementById('new-status').value;
@@ -392,20 +417,20 @@ document.getElementById('status-update-form').addEventListener('submit', functio
             notes: notes
         })
     })
-    .then(response => response.json())
+        .then(response => {
+            // Check if response is actually JSON before parsing
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                return response.text().then(text => {
+                    throw new Error('Response is not JSON: ' + text.substring(0, 100));
+                });
+            }
+            return response.json();
+        })
     .then(data => {
         if (data.success) {
-            let message = 'Status berhasil diupdate';
-
-            // Show WhatsApp notification link if available
-            if (data.whatsapp_link) {
-                message += '\n\nKirim notifikasi WhatsApp ke customer?';
-                if (confirm(message)) {
-                    window.open(data.whatsapp_link, '_blank');
-                }
-            } else {
-                alert(message);
-            }
+            // Telegram notification is sent automatically via TelegramClientService
+            alert('Status berhasil diupdate!\n\nNotifikasi Telegram telah dikirim ke customer.');
 
             document.getElementById('status-update-form').reset();
             loadOrderDetail(); // Reload order detail
@@ -418,18 +443,25 @@ document.getElementById('status-update-form').addEventListener('submit', functio
         alert('Terjadi kesalahan saat mengupdate status');
     });
 });
+}
 
 // Handle pickup proof form submission
-document.getElementById('pickup-proof-form').addEventListener('submit', function(e) {
+const pickupProofForm = document.getElementById('pickup-proof-form');
+if (pickupProofForm) {
+    pickupProofForm.addEventListener('submit', function(e) {
     e.preventDefault();
     uploadPickupProof();
 });
+}
 
 // Handle delivery proof form submission
-document.getElementById('delivery-proof-form').addEventListener('submit', function(e) {
+const deliveryProofForm = document.getElementById('delivery-proof-form');
+if (deliveryProofForm) {
+    deliveryProofForm.addEventListener('submit', function(e) {
     e.preventDefault();
     uploadDeliveryProof();
 });
+}
 
 // Function to update delivery proof status display
 function updateDeliveryProofStatus(order) {

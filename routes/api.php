@@ -6,6 +6,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ComplaintController;
 use App\Http\Controllers\AddressController;
+use App\Http\Controllers\TelegramWebhookController;
 
 /*
 |--------------------------------------------------------------------------
@@ -21,6 +22,9 @@ use App\Http\Controllers\AddressController;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
+
+// Telegram webhook (no auth)
+Route::post('/telegram/webhook', [TelegramWebhookController::class, 'handle']);
 
 // Authentication routes
 Route::post('/register', [AuthController::class, 'register']);

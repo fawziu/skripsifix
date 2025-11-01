@@ -173,14 +173,33 @@ class CourierController extends Controller
     }
 
     /**
+     * Safely clean output buffers
+     */
+    private function safeCleanOutputBuffers(): void
+    {
+        while (ob_get_level() > 0) {
+            @ob_end_clean();
+        }
+    }
+
+    /**
      * Update order status (for couriers)
      */
+
     public function updateOrderStatus(Request $request, Order $order)
     {
+        // Start output buffering to catch any unexpected output from MadelineProto
+        $initialObLevel = ob_get_level();
+        if ($initialObLevel === 0) {
+            ob_start();
+        }
+        
+        try {
         $user = Auth::user();
 
         // Check if courier is assigned to this order
         if ($order->courier_id !== $user->id) {
+                $this->safeCleanOutputBuffers();
             return response()->json([
                 'success' => false,
                 'message' => 'Anda tidak memiliki akses untuk mengupdate pesanan ini'
@@ -190,6 +209,7 @@ class CourierController extends Controller
         // Check if order is in valid status for courier update
         $validStatuses = ['pending', 'assigned', 'picked_up', 'in_transit', 'confirmed'];
         if (!in_array($order->status, $validStatuses)) {
+                $this->safeCleanOutputBuffers();
             return response()->json([
                 'success' => false,
                 'message' => 'Status pesanan tidak dapat diupdate saat ini'
@@ -198,6 +218,7 @@ class CourierController extends Controller
 
         // Prevent courier from marking as delivered - only customer can confirm delivery
         if ($request->status === 'delivered') {
+                $this->safeCleanOutputBuffers();
             return response()->json([
                 'success' => false,
                 'message' => 'Kurir tidak dapat menandai pesanan sebagai terkirim. Customer harus mengonfirmasi penerimaan barang.'
@@ -209,13 +230,16 @@ class CourierController extends Controller
             'notes' => 'nullable|string|max:500'
         ]);
 
-        try {
             $oldStatus = $order->status;
             $newStatus = $request->status;
             $notes = $request->notes;
 
             // Use OrderService to update status with WhatsApp notification
+            // This may trigger TelegramClientService which handles its own output buffering
             $result = $this->orderService->updateOrderStatus($order, $newStatus, $user, $notes);
+            
+            // Clean any output buffers that may have been created (from MadelineProto warnings)
+            $this->safeCleanOutputBuffers();
 
             if ($result['success']) {
                 return response()->json([
@@ -236,9 +260,12 @@ class CourierController extends Controller
             ], 500);
 
         } catch (\Exception $e) {
+            // Clean output buffer on error
+            $this->safeCleanOutputBuffers();
+            
             Log::error('Error updating order status', [
                 'order_id' => $order->id,
-                'courier_id' => $user->id,
+                'courier_id' => $user->id ?? null,
                 'error' => $e->getMessage()
             ]);
 
@@ -254,10 +281,18 @@ class CourierController extends Controller
      */
     public function getOrderDetails(Order $order)
     {
+        // Start output buffering to catch any unexpected output
+        $initialObLevel = ob_get_level();
+        if ($initialObLevel === 0) {
+            ob_start();
+        }
+        
+        try {
         $user = Auth::user();
 
         // Check if courier is assigned to this order
         if ($order->courier_id !== $user->id) {
+                $this->safeCleanOutputBuffers();
             return response()->json([
                 'success' => false,
                 'message' => 'Anda tidak memiliki akses untuk melihat pesanan ini'
@@ -266,13 +301,14 @@ class CourierController extends Controller
 
         // Check if order exists and has valid status
         if (!$order) {
+                $this->safeCleanOutputBuffers();
             return response()->json([
                 'success' => false,
                 'message' => 'Pesanan tidak ditemukan'
             ], 404);
         }
 
-        return response()->json([
+            $responseData = [
             'success' => true,
             'data' => [
                 'order' => [
@@ -315,7 +351,22 @@ class CourierController extends Controller
                         ];
                     })
             ]
-        ]);
+            ];
+            
+            // Clean any output buffers before sending response
+            $this->safeCleanOutputBuffers();
+            
+            return response()->json($responseData);
+        } catch (\Throwable $e) {
+            // Clean output buffer on error
+            $this->safeCleanOutputBuffers();
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan saat memuat detail pesanan',
+                'error' => config('app.debug') ? $e->getMessage() : null
+            ], 500);
+        }
     }
 
     /**

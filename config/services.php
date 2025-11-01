@@ -36,4 +36,12 @@ return [
         'base_url' => env('RAJAONGKIR_BASE_URL', 'https://rajaongkir.komerce.id/api/v2'),
     ],
 
+    'telegram' => [
+        'bot_token' => env('TELEGRAM_BOT_TOKEN'),
+        // Telegram Client API (untuk kirim dari akun pribadi)
+        'client_api_id' => env('TELEGRAM_CLIENT_API_ID'),
+        'client_api_hash' => env('TELEGRAM_CLIENT_API_HASH'),
+        'client_phone' => env('TELEGRAM_CLIENT_PHONE'),
+    ],
+
 ];

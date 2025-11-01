@@ -84,67 +84,25 @@ class UserSeeder extends Seeder
             );
         }
 
-        // Create Customers
+        // Create Customers (only 3 customers with specific phone numbers)
         $customers = [
             [
-                'name' => 'member',
-                'email' => 'member@afiyah.com',
-                'phone' => '081234567896',
+                'name' => 'Customer 1',
+                'email' => 'customer1@afiyah.com',
+                'phone' => '087866707600',
                 'address' => 'Jl. Customer No. 1, Makassar',
             ],
             [
-                'name' => 'Gita Sari',
-                'email' => 'gita@example.com',
-                'phone' => '081234567897',
+                'name' => 'Customer 2',
+                'email' => 'customer2@afiyah.com',
+                'phone' => '081240935073',
                 'address' => 'Jl. Customer No. 2, Makassar',
             ],
             [
-                'name' => 'Hendra Wijaya',
-                'email' => 'hendra@example.com',
-                'phone' => '081234567898',
+                'name' => 'Customer 3',
+                'email' => 'customer3@afiyah.com',
+                'phone' => '082195497261',
                 'address' => 'Jl. Customer No. 3, Makassar',
-            ],
-            [
-                'name' => 'Indah Permata',
-                'email' => 'indah@example.com',
-                'phone' => '081234567899',
-                'address' => 'Jl. Customer No. 4, Makassar',
-            ],
-            [
-                'name' => 'Joko Widodo',
-                'email' => 'joko@example.com',
-                'phone' => '081234567800',
-                'address' => 'Jl. Customer No. 5, Makassar',
-            ],
-            [
-                'name' => 'Kartika Sari',
-                'email' => 'kartika@example.com',
-                'phone' => '081234567801',
-                'address' => 'Jl. Customer No. 6, Makassar',
-            ],
-            [
-                'name' => 'Lukman Hakim',
-                'email' => 'lukman@example.com',
-                'phone' => '081234567802',
-                'address' => 'Jl. Customer No. 7, Makassar',
-            ],
-            [
-                'name' => 'Maya Indah',
-                'email' => 'maya@example.com',
-                'phone' => '081234567803',
-                'address' => 'Jl. Customer No. 8, Makassar',
-            ],
-            [
-                'name' => 'Nugraha Pratama',
-                'email' => 'nugraha@example.com',
-                'phone' => '081234567804',
-                'address' => 'Jl. Customer No. 9, Makassar',
-            ],
-            [
-                'name' => 'Oktavia Putri',
-                'email' => 'oktavia@example.com',
-                'phone' => '081234567805',
-                'address' => 'Jl. Customer No. 10, Makassar',
             ],
         ];
 
