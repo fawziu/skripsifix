@@ -184,23 +184,52 @@ class TelegramClientService
                 return false;
             }
 
-            // Initialize MadelineProto with session
+            // Initialize MadelineProto with session and settings to disable IPC
+            // Create settings to disable IPC server (fix for Windows TCP connection issues)
             // @phpstan-ignore-next-line - MadelineProto loaded conditionally
-            $madeline = new \danog\MadelineProto\API($sessionFile);
+            $appInfo = (new \danog\MadelineProto\Settings\AppInfo)
+                ->setApiId((int) $this->apiId)
+                ->setApiHash($this->apiHash);
+            
+            // Create main settings object
+            // @phpstan-ignore-next-line - MadelineProto loaded conditionally
+            $settings = new \danog\MadelineProto\Settings;
+            $settings->setAppInfo($appInfo);
+            
+            // Disable IPC server by setting slow mode (fixes Windows TCP connection error)
+            // Using try-catch in case method doesn't exist in this version
+            try {
+                // @phpstan-ignore-next-line - MadelineProto loaded conditionally
+                $settings->getIpc()->setSlow(true);
+            } catch (\Throwable $e) {
+                // Fallback: try setEnabled(false) if setSlow doesn't exist
+                try {
+                    // @phpstan-ignore-next-line - MadelineProto loaded conditionally
+                    $settings->getIpc()->setEnabled(false);
+                } catch (\Throwable $e2) {
+                    // If both fail, continue without IPC settings (may still work)
+                    Log::warning('Could not configure IPC settings', ['error' => $e2->getMessage()]);
+                }
+            }
+            
+            // Disable IPv6 for Windows compatibility
+            try {
+                // @phpstan-ignore-next-line - MadelineProto loaded conditionally
+                $settings->getConnection()->setIpv6(false);
+            } catch (\Throwable $e) {
+                // Continue without IPv6 settings if method doesn't exist
+                Log::warning('Could not configure connection settings', ['error' => $e->getMessage()]);
+            }
+            
+            // Initialize MadelineProto with session and settings
+            // @phpstan-ignore-next-line - MadelineProto loaded conditionally
+            $madeline = new \danog\MadelineProto\API($sessionFile, $settings);
             
             // Try to start/restore session (will auto-use existing authenticated session)
             // Don't call getSelf() first as it throws exception if not ready
             try {
                 // @phpstan-ignore-next-line - MadelineProto API may vary
-                $madeline->start([
-                    'api_id' => (int) $this->apiId,
-                    'api_hash' => $this->apiHash,
-                ]);
-                
-                // Wait a bit for IPC to stabilize (Windows workaround)
-                if (PHP_OS_FAMILY === 'Windows') {
-                    usleep(1000000); // 1 second for Windows
-                }
+                $madeline->start();
             } catch (\Throwable $startError) {
                 $this->cleanAllOutputBuffers();
                 error_reporting($oldErrorReporting);

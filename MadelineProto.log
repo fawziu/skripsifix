@@ -4172,3 +4172,135 @@ SessionPaths:   	Got exclusive lock of D:\side\skripsifix\storage\app/telegram_s
 SessionPaths:   	Waiting for exclusive lock of D:\side\skripsifix\storage\app/telegram_session/session.madeline\lightState.php.lock...
 SessionPaths:   	Got exclusive lock of D:\side\skripsifix\storage\app/telegram_session/session.madeline\lightState.php.lock...
 APIWrapper:     	Saved session!
+Exception, 1684549947:      	stream_socket_server(): Unable to connect to tcp://127.0.0.1:0 (The operation completed successfully) in IpcServer.php:105
+MTProto, 1684549947:        	Reporting: Amp\Ipc\IpcServerException: Could not create IPC server: TCP: (errno: 0) exception: \danog\MadelineProto\Exception: stream_socket_server(): Unable to connect to tcp://127.0.0.1:0 (The operation completed successfully) in D:\side\skripsifix\vendor\danog\ipc\lib\IpcServer.php:105
+Revision: 8.6.0
+TL Trace:
+
+exceptionErrorHandler(2,"stream_socket_server(): Unable to connect to tcp:\/\/127.0.0.1:0 (The operation completed successfully)","D:\\side\\skripsifix\\vendor\\danog\\ipc\\lib\\IpcServer.php",105)
+IpcServer.php(105): 	stream_socket_server("tcp:\/\/127.0.0.1:0",0,"",12)
+AbstractServer.php(99):	__construct("D:\\side\\skripsifix\\storage\\app\/telegram_session\/session.madeline\\ipc")
+MTProto.php(1033):  	setIpcPath({})
+MTProto.php(1181):  	cleanupProperties()
+API.php(344):       	wakeup({},{})
+API.php(194):       	connectToMadelineProto({})
+entry.php(114):     	__construct("D:\\side\\skripsifix\\storage\\app\/telegram_session\/session.madeline",{})
+entry.php(154):     	danog\MadelineProto\Ipc\Runner\{closure}();  in D:\side\skripsifix\vendor\danog\ipc\lib\IpcServer.php:137
+Stack trace:
+#0 D:\side\skripsifix\vendor\danog\madelineproto\src\Ipc\AbstractServer.php(99): Amp\Ipc\IpcServer->__construct('D:\\side\\skripsi...')
+#1 D:\side\skripsifix\vendor\danog\madelineproto\src\MTProto.php(1033): danog\MadelineProto\Ipc\AbstractServer->setIpcPath(Object(danog\MadelineProto\SessionPaths))
+#2 D:\side\skripsifix\vendor\danog\madelineproto\src\MTProto.php(1181): danog\MadelineProto\MTProto->cleanupProperties()
+#3 D:\side\skripsifix\vendor\danog\madelineproto\src\API.php(344): danog\MadelineProto\MTProto->wakeup(Object(danog\MadelineProto\SettingsEmpty), Object(danog\MadelineProto\APIWrapper))
+#4 D:\side\skripsifix\vendor\danog\madelineproto\src\API.php(194): danog\MadelineProto\API->connectToMadelineProto(Object(danog\MadelineProto\SettingsEmpty))
+#5 D:\side\skripsifix\vendor\danog\madelineproto\src\Ipc\Runner\entry.php(114): danog\MadelineProto\API->__construct('D:\\side\\skripsi...', Object(danog\MadelineProto\Settings\Ipc))
+#6 D:\side\skripsifix\vendor\danog\madelineproto\src\Ipc\Runner\entry.php(154): danog\MadelineProto\Ipc\Runner\{closure}()
+#7 {main}
+entry, 1684549947:          	Amp\Ipc\IpcServerException: Could not create IPC server: TCP: (errno: 0) exception: \danog\MadelineProto\Exception: stream_socket_server(): Unable to connect to tcp://127.0.0.1:0 (The operation completed successfully) in D:\side\skripsifix\vendor\danog\ipc\lib\IpcServer.php:105
+Revision: 8.6.0
+TL Trace:
+
+exceptionErrorHandler(2,"stream_socket_server(): Unable to connect to tcp:\/\/127.0.0.1:0 (The operation completed successfully)","D:\\side\\skripsifix\\vendor\\danog\\ipc\\lib\\IpcServer.php",105)
+IpcServer.php(105): 	stream_socket_server("tcp:\/\/127.0.0.1:0",0,"",12)
+AbstractServer.php(99):	__construct("D:\\side\\skripsifix\\storage\\app\/telegram_session\/session.madeline\\ipc")
+MTProto.php(1033):  	setIpcPath({})
+MTProto.php(1181):  	cleanupProperties()
+API.php(344):       	wakeup({},{})
+API.php(194):       	connectToMadelineProto({})
+entry.php(114):     	__construct("D:\\side\\skripsifix\\storage\\app\/telegram_session\/session.madeline",{})
+entry.php(154):     	danog\MadelineProto\Ipc\Runner\{closure}();  in D:\side\skripsifix\vendor\danog\ipc\lib\IpcServer.php:137
+Stack trace:
+#0 D:\side\skripsifix\vendor\danog\madelineproto\src\Ipc\AbstractServer.php(99): Amp\Ipc\IpcServer->__construct('D:\\side\\skripsi...')
+#1 D:\side\skripsifix\vendor\danog\madelineproto\src\MTProto.php(1033): danog\MadelineProto\Ipc\AbstractServer->setIpcPath(Object(danog\MadelineProto\SessionPaths))
+#2 D:\side\skripsifix\vendor\danog\madelineproto\src\MTProto.php(1181): danog\MadelineProto\MTProto->cleanupProperties()
+#3 D:\side\skripsifix\vendor\danog\madelineproto\src\API.php(344): danog\MadelineProto\MTProto->wakeup(Object(danog\MadelineProto\SettingsEmpty), Object(danog\MadelineProto\APIWrapper))
+#4 D:\side\skripsifix\vendor\danog\madelineproto\src\API.php(194): danog\MadelineProto\API->connectToMadelineProto(Object(danog\MadelineProto\SettingsEmpty))
+#5 D:\side\skripsifix\vendor\danog\madelineproto\src\Ipc\Runner\entry.php(114): danog\MadelineProto\API->__construct('D:\\side\\skripsi...', Object(danog\MadelineProto\Settings\Ipc))
+#6 D:\side\skripsifix\vendor\danog\madelineproto\src\Ipc\Runner\entry.php(154): danog\MadelineProto\Ipc\Runner\{closure}()
+#7 {main}
+entry, 1684549947:          	Got exception in IPC server, exiting...
+entry, 1684549947:          	Reporting error!
+SessionPaths, 1684549947:   	Waiting for exclusive lock of D:\side\skripsifix\storage\app/telegram_session/session.madeline\ipcState.php.lock...
+SessionPaths, 1684549947:   	Got exclusive lock of D:\side\skripsifix\storage\app/telegram_session/session.madeline\ipcState.php.lock...
+entry, 1684549947:          	Reported error!
+MTProto, 1684549947:        	Prompting final serialization (SHUTDOWN)...
+SessionPaths, 1684549947:   	Waiting for exclusive lock of D:\side\skripsifix\storage\app/telegram_session/session.madeline\safe.php.lock...
+SessionPaths, 1684549947:   	Got exclusive lock of D:\side\skripsifix\storage\app/telegram_session/session.madeline\safe.php.lock...
+SessionPaths, 1684549947:   	Waiting for exclusive lock of D:\side\skripsifix\storage\app/telegram_session/session.madeline\lightState.php.lock...
+SessionPaths, 1684549947:   	Got exclusive lock of D:\side\skripsifix\storage\app/telegram_session/session.madeline\lightState.php.lock...
+APIWrapper, 1684549947:     	Saved session!
+MTProto, 1684549947:        	Done final serialization (SHUTDOWN)!
+MTProto, 1684549947:        	Shutting down MadelineProto (MTProto)
+MTProto, 1684549947:        	Will unreference instance
+Exception, 1684549947:      	Error: Typed property danog\MadelineProto\Ipc\AbstractServer::$server must not be accessed before initialization in D:\side\skripsifix\vendor\danog\madelineproto\src\Ipc\AbstractServer.php:185
+Stack trace:
+#0 D:\side\skripsifix\vendor\danog\madelineproto\src\MTProto.php(957): danog\MadelineProto\Ipc\AbstractServer->stop()
+#1 D:\side\skripsifix\vendor\danog\madelineproto\src\MTProto.php(1278): danog\MadelineProto\MTProto->stopLoops()
+#2 D:\side\skripsifix\vendor\danog\madelineproto\src\MTProto.php(1312): danog\MadelineProto\MTProto->unreference()
+#3 [internal function]: danog\MadelineProto\MTProto->__destruct()
+#4 {main}
+Exception, 1684549947:      	stream_socket_server(): Unable to connect to tcp://127.0.0.1:0 (The operation completed successfully) in IpcServer.php:105
+MTProto, 1684549947:        	Reporting: Amp\Ipc\IpcServerException: Could not create IPC server: TCP: (errno: 0) exception: \danog\MadelineProto\Exception: stream_socket_server(): Unable to connect to tcp://127.0.0.1:0 (The operation completed successfully) in D:\side\skripsifix\vendor\danog\ipc\lib\IpcServer.php:105
+Revision: 8.6.0
+TL Trace:
+
+exceptionErrorHandler(2,"stream_socket_server(): Unable to connect to tcp:\/\/127.0.0.1:0 (The operation completed successfully)","D:\\side\\skripsifix\\vendor\\danog\\ipc\\lib\\IpcServer.php",105)
+IpcServer.php(105): 	stream_socket_server("tcp:\/\/127.0.0.1:0",0,"",12)
+AbstractServer.php(99):	__construct("D:\\side\\skripsifix\\storage\\app\/telegram_session\/session.madeline\\ipc")
+MTProto.php(1033):  	setIpcPath({})
+MTProto.php(1181):  	cleanupProperties()
+API.php(344):       	wakeup({},{})
+API.php(194):       	connectToMadelineProto({})
+entry.php(114):     	__construct("D:\\side\\skripsifix\\storage\\app\/telegram_session\/session.madeline",{})
+entry.php(154):     	danog\MadelineProto\Ipc\Runner\{closure}();  in D:\side\skripsifix\vendor\danog\ipc\lib\IpcServer.php:137
+Stack trace:
+#0 D:\side\skripsifix\vendor\danog\madelineproto\src\Ipc\AbstractServer.php(99): Amp\Ipc\IpcServer->__construct('D:\\side\\skripsi...')
+#1 D:\side\skripsifix\vendor\danog\madelineproto\src\MTProto.php(1033): danog\MadelineProto\Ipc\AbstractServer->setIpcPath(Object(danog\MadelineProto\SessionPaths))
+#2 D:\side\skripsifix\vendor\danog\madelineproto\src\MTProto.php(1181): danog\MadelineProto\MTProto->cleanupProperties()
+#3 D:\side\skripsifix\vendor\danog\madelineproto\src\API.php(344): danog\MadelineProto\MTProto->wakeup(Object(danog\MadelineProto\SettingsEmpty), Object(danog\MadelineProto\APIWrapper))
+#4 D:\side\skripsifix\vendor\danog\madelineproto\src\API.php(194): danog\MadelineProto\API->connectToMadelineProto(Object(danog\MadelineProto\SettingsEmpty))
+#5 D:\side\skripsifix\vendor\danog\madelineproto\src\Ipc\Runner\entry.php(114): danog\MadelineProto\API->__construct('D:\\side\\skripsi...', Object(danog\MadelineProto\Settings\Ipc))
+#6 D:\side\skripsifix\vendor\danog\madelineproto\src\Ipc\Runner\entry.php(154): danog\MadelineProto\Ipc\Runner\{closure}()
+#7 {main}
+entry, 1684549947:          	Amp\Ipc\IpcServerException: Could not create IPC server: TCP: (errno: 0) exception: \danog\MadelineProto\Exception: stream_socket_server(): Unable to connect to tcp://127.0.0.1:0 (The operation completed successfully) in D:\side\skripsifix\vendor\danog\ipc\lib\IpcServer.php:105
+Revision: 8.6.0
+TL Trace:
+
+exceptionErrorHandler(2,"stream_socket_server(): Unable to connect to tcp:\/\/127.0.0.1:0 (The operation completed successfully)","D:\\side\\skripsifix\\vendor\\danog\\ipc\\lib\\IpcServer.php",105)
+IpcServer.php(105): 	stream_socket_server("tcp:\/\/127.0.0.1:0",0,"",12)
+AbstractServer.php(99):	__construct("D:\\side\\skripsifix\\storage\\app\/telegram_session\/session.madeline\\ipc")
+MTProto.php(1033):  	setIpcPath({})
+MTProto.php(1181):  	cleanupProperties()
+API.php(344):       	wakeup({},{})
+API.php(194):       	connectToMadelineProto({})
+entry.php(114):     	__construct("D:\\side\\skripsifix\\storage\\app\/telegram_session\/session.madeline",{})
+entry.php(154):     	danog\MadelineProto\Ipc\Runner\{closure}();  in D:\side\skripsifix\vendor\danog\ipc\lib\IpcServer.php:137
+Stack trace:
+#0 D:\side\skripsifix\vendor\danog\madelineproto\src\Ipc\AbstractServer.php(99): Amp\Ipc\IpcServer->__construct('D:\\side\\skripsi...')
+#1 D:\side\skripsifix\vendor\danog\madelineproto\src\MTProto.php(1033): danog\MadelineProto\Ipc\AbstractServer->setIpcPath(Object(danog\MadelineProto\SessionPaths))
+#2 D:\side\skripsifix\vendor\danog\madelineproto\src\MTProto.php(1181): danog\MadelineProto\MTProto->cleanupProperties()
+#3 D:\side\skripsifix\vendor\danog\madelineproto\src\API.php(344): danog\MadelineProto\MTProto->wakeup(Object(danog\MadelineProto\SettingsEmpty), Object(danog\MadelineProto\APIWrapper))
+#4 D:\side\skripsifix\vendor\danog\madelineproto\src\API.php(194): danog\MadelineProto\API->connectToMadelineProto(Object(danog\MadelineProto\SettingsEmpty))
+#5 D:\side\skripsifix\vendor\danog\madelineproto\src\Ipc\Runner\entry.php(114): danog\MadelineProto\API->__construct('D:\\side\\skripsi...', Object(danog\MadelineProto\Settings\Ipc))
+#6 D:\side\skripsifix\vendor\danog\madelineproto\src\Ipc\Runner\entry.php(154): danog\MadelineProto\Ipc\Runner\{closure}()
+#7 {main}
+entry, 1684549947:          	Got exception in IPC server, exiting...
+entry, 1684549947:          	Reporting error!
+SessionPaths, 1684549947:   	Waiting for exclusive lock of D:\side\skripsifix\storage\app/telegram_session/session.madeline\ipcState.php.lock...
+SessionPaths, 1684549947:   	Got exclusive lock of D:\side\skripsifix\storage\app/telegram_session/session.madeline\ipcState.php.lock...
+entry, 1684549947:          	Reported error!
+MTProto, 1684549947:        	Prompting final serialization (SHUTDOWN)...
+SessionPaths, 1684549947:   	Waiting for exclusive lock of D:\side\skripsifix\storage\app/telegram_session/session.madeline\safe.php.lock...
+SessionPaths, 1684549947:   	Got exclusive lock of D:\side\skripsifix\storage\app/telegram_session/session.madeline\safe.php.lock...
+SessionPaths, 1684549947:   	Waiting for exclusive lock of D:\side\skripsifix\storage\app/telegram_session/session.madeline\lightState.php.lock...
+SessionPaths, 1684549947:   	Got exclusive lock of D:\side\skripsifix\storage\app/telegram_session/session.madeline\lightState.php.lock...
+APIWrapper, 1684549947:     	Saved session!
+MTProto, 1684549947:        	Done final serialization (SHUTDOWN)!
+MTProto, 1684549947:        	Shutting down MadelineProto (MTProto)
+MTProto, 1684549947:        	Will unreference instance
+Exception, 1684549947:      	Error: Typed property danog\MadelineProto\Ipc\AbstractServer::$server must not be accessed before initialization in D:\side\skripsifix\vendor\danog\madelineproto\src\Ipc\AbstractServer.php:185
+Stack trace:
+#0 D:\side\skripsifix\vendor\danog\madelineproto\src\MTProto.php(957): danog\MadelineProto\Ipc\AbstractServer->stop()
+#1 D:\side\skripsifix\vendor\danog\madelineproto\src\MTProto.php(1278): danog\MadelineProto\MTProto->stopLoops()
+#2 D:\side\skripsifix\vendor\danog\madelineproto\src\MTProto.php(1312): danog\MadelineProto\MTProto->unreference()
+#3 [internal function]: danog\MadelineProto\MTProto->__destruct()
+#4 {main}
