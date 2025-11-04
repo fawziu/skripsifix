@@ -186,6 +186,9 @@ class OrderController extends Controller
                 'order_number' => $order->order_number,
             ]);
 
+            // Clean any output buffers that may have been created (from MadelineProto warnings)
+            $this->safeCleanOutputBuffers();
+
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => true,
@@ -197,6 +200,9 @@ class OrderController extends Controller
             return redirect()->route('orders.index')
                 ->with('success', 'Pesanan berhasil dibuat!');
         } catch (\Exception $e) {
+            // Clean output buffer on error
+            $this->safeCleanOutputBuffers();
+            
             Log::error('Error creating order', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
@@ -302,6 +308,9 @@ class OrderController extends Controller
                         // Generate WhatsApp notification link
                         $whatsappLink = $this->whatsappService->generateOrderConfirmationLink($order, $user);
 
+                        // Clean any output buffers that may have been created (from MadelineProto warnings)
+                        $this->safeCleanOutputBuffers();
+
                         return response()->json([
                             'success' => true,
                             'message' => 'Order confirmed and waybill generated successfully',
@@ -347,6 +356,9 @@ class OrderController extends Controller
                 // Generate WhatsApp notification link
                 $whatsappLink = $this->whatsappService->generateOrderConfirmationLink($order, $user);
 
+                // Clean any output buffers that may have been created (from MadelineProto warnings)
+                $this->safeCleanOutputBuffers();
+
                 return response()->json([
                     'success' => true,
                     'message' => 'Order confirmed for manual shipping',
@@ -355,6 +367,9 @@ class OrderController extends Controller
             }
 
         } catch (\Exception $e) {
+            // Clean output buffer on error
+            $this->safeCleanOutputBuffers();
+            
             Log::error('Failed to confirm order', [
                 'order_id' => $order->id,
                 'error' => $e->getMessage(),
@@ -601,6 +616,9 @@ class OrderController extends Controller
 
             $success = $this->orderService->assignCourier($order, $courier, $user);
 
+            // Clean any output buffers that may have been created (from MadelineProto warnings)
+            $this->safeCleanOutputBuffers();
+
             if ($success) {
                 return response()->json([
                     'success' => true,
@@ -614,6 +632,9 @@ class OrderController extends Controller
                 'message' => 'Failed to assign courier',
             ], 500);
         } catch (\Exception $e) {
+            // Clean output buffer on error
+            $this->safeCleanOutputBuffers();
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to assign courier',
@@ -658,6 +679,9 @@ class OrderController extends Controller
                 $request->notes
             );
 
+            // Clean any output buffers that may have been created (from MadelineProto warnings)
+            $this->safeCleanOutputBuffers();
+
             if ($result['success']) {
                 return response()->json([
                     'success' => true,
@@ -672,6 +696,9 @@ class OrderController extends Controller
                 'message' => 'Failed to update order status',
             ], 500);
         } catch (\Exception $e) {
+            // Clean output buffer on error
+            $this->safeCleanOutputBuffers();
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update order status',
@@ -837,6 +864,9 @@ class OrderController extends Controller
      */
     public function getAvailableCouriers(): JsonResponse
     {
+        // Clean any existing output buffers before starting (prevent contamination from autoloaders, etc.)
+        $this->safeCleanOutputBuffers();
+        
         try {
             Log::info('getAvailableCouriers called');
 
@@ -858,11 +888,17 @@ class OrderController extends Controller
 
             Log::info('Courier data prepared:', ['data' => $courierData->toArray()]);
 
+            // Clean any output buffers that may have been created (from MadelineProto warnings)
+            $this->safeCleanOutputBuffers();
+
             return response()->json([
                 'success' => true,
                 'data' => $courierData,
             ]);
         } catch (\Exception $e) {
+            // Clean output buffer on error
+            $this->safeCleanOutputBuffers();
+            
             Log::error('Error in getAvailableCouriers:', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
@@ -875,4 +911,14 @@ class OrderController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Safely clean all output buffers to prevent contamination of JSON responses
+     */
+    // private function safeCleanOutputBuffers(): void
+    // {
+    //     while (ob_get_level() > 0) {
+    //         @ob_end_clean();
+    //     }
+    // }
 }

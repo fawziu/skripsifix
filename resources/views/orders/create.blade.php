@@ -870,10 +870,37 @@ function orderForm() {
 
                     const contentType = response.headers.get('content-type');
                     if (!contentType || !contentType.includes('application/json')) {
-                        throw new Error('Response is not JSON');
+                        // Try to extract JSON from response if it's mixed with other output
+                        return response.text().then(text => {
+                            const jsonMatch = text.match(/\{[\s\S]*\}/);
+                            if (jsonMatch) {
+                                try {
+                                    return JSON.parse(jsonMatch[0]);
+                                } catch (e) {
+                                    throw new Error('Invalid JSON in response: ' + text.substring(0, 200));
+                                }
+                            }
+                            throw new Error('Response is not JSON: ' + text.substring(0, 200));
+                        });
                     }
 
-                    return response.json();
+                    return response.text().then(text => {
+                        // Even if content-type is JSON, try to extract JSON if response is contaminated
+                        try {
+                            return JSON.parse(text);
+                        } catch (e) {
+                            // If parsing fails, try to extract JSON from text
+                            const jsonMatch = text.match(/\{[\s\S]*\}/);
+                            if (jsonMatch) {
+                                try {
+                                    return JSON.parse(jsonMatch[0]);
+                                } catch (e2) {
+                                    throw new Error('Invalid JSON in response: ' + text.substring(0, 200));
+                                }
+                            }
+                            throw new Error('Invalid JSON response: ' + text.substring(0, 200));
+                        }
+                    });
                 })
                 .then(data => {
                     console.log('Courier data received:', data);

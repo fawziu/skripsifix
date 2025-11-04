@@ -155,18 +155,36 @@ class OrderService
             // Send Telegram notification via Client API (from personal account)
             // Wrap in try-catch to prevent Telegram errors from breaking the order update
             if ($this->telegramClientService && $this->telegramClientService->isConfigured()) {
+                // Remember output buffer level before Telegram call
+                $obLevelBeforeTelegram = ob_get_level();
+                
                 try {
                     $this->telegramClientService->sendOrderStatusUpdate($order, 'confirmed', $admin);
+                    
+                    // Restore output buffer level (TelegramClientService manages its own buffers)
+                    while (ob_get_level() > $obLevelBeforeTelegram) {
+                        @ob_end_clean();
+                    }
                 } catch (\Throwable $telegramError) {
                     // Log error but don't fail the order update
                     Log::warning('Telegram notification failed during order confirmation', [
                         'order_id' => $order->id,
                         'error' => $telegramError->getMessage()
                     ]);
+                    
+                    // Restore output buffer level even on error
+                    while (ob_get_level() > $obLevelBeforeTelegram) {
+                        @ob_end_clean();
+                    }
                 }
             }
 
             DB::commit();
+
+            // Final cleanup: ensure all output buffers are cleared before returning
+            while (ob_get_level() > 0) {
+                @ob_end_clean();
+            }
 
             return [
                 'success' => true,
@@ -305,6 +323,11 @@ class OrderService
             }
 
             DB::commit();
+
+            // Final cleanup: ensure all output buffers are cleared before returning
+            while (ob_get_level() > 0) {
+                @ob_end_clean();
+            }
 
             return [
                 'success' => true,
