@@ -248,6 +248,27 @@ class LocationTracker {
         }
     }
 
+    // Helper function to safely parse JSON response
+    parseJsonResponse(response) {
+        // Check if response is actually JSON before parsing
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            return response.text().then(text => {
+                // Try to extract JSON from response if it's mixed with other output
+                const jsonMatch = text.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    try {
+                        return JSON.parse(jsonMatch[0]);
+                    } catch (e) {
+                        throw new Error('Invalid JSON in response: ' + text.substring(0, 200));
+                    }
+                }
+                throw new Error('Response is not JSON: ' + text.substring(0, 200));
+            });
+        }
+        return response.json();
+    }
+
     updateMyLocation(position) {
         const lat = position.coords.latitude;
         const lng = position.coords.longitude;
@@ -269,7 +290,7 @@ class LocationTracker {
                 heading: position.coords.heading || null
             })
         })
-        .then(response => response.json())
+        .then(response => this.parseJsonResponse(response))
         .then(data => {
             if (data.success) {
                 console.log('Location updated successfully');
@@ -287,7 +308,7 @@ class LocationTracker {
                 'Accept': 'application/json'
             }
         })
-        .then(response => response.json())
+        .then(response => this.parseJsonResponse(response))
         .then(data => {
             if (data.success) {
                 this.updateMapWithLocations(data.data);

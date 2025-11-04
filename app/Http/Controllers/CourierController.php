@@ -79,103 +79,128 @@ class CourierController extends Controller
      */
     public function getDashboardData()
     {
-        $user = Auth::user();
+        // Start output buffering to catch any unexpected output from MadelineProto
+        $initialObLevel = ob_get_level();
+        if ($initialObLevel === 0) {
+            ob_start();
+        }
+        
+        try {
+            $user = Auth::user();
 
-        // Get real-time statistics
-        $assignedOrders = Order::where('courier_id', $user->id)
-            ->whereIn('status', ['pending', 'assigned', 'picked_up', 'in_transit', 'confirmed', 'awaiting_confirmation'])
-            ->count();
+            // Get real-time statistics
+            $assignedOrders = Order::where('courier_id', $user->id)
+                ->whereIn('status', ['pending', 'assigned', 'picked_up', 'in_transit', 'confirmed', 'awaiting_confirmation'])
+                ->count();
 
-        $inProgressOrders = Order::where('courier_id', $user->id)
-            ->whereIn('status', ['picked_up', 'in_transit'])
-            ->count();
+            $inProgressOrders = Order::where('courier_id', $user->id)
+                ->whereIn('status', ['picked_up', 'in_transit'])
+                ->count();
 
-        $completedToday = Order::where('courier_id', $user->id)
-            ->where('status', 'delivered')
-            ->whereDate('updated_at', Carbon::today())
-            ->count();
+            $completedToday = Order::where('courier_id', $user->id)
+                ->where('status', 'delivered')
+                ->whereDate('updated_at', Carbon::today())
+                ->count();
 
-        $totalDelivered = Order::where('courier_id', $user->id)
-            ->where('status', 'delivered')
-            ->count();
+            $totalDelivered = Order::where('courier_id', $user->id)
+                ->where('status', 'delivered')
+                ->count();
 
-        // Get current deliveries
-        $currentDeliveries = Order::where('courier_id', $user->id)
-            ->whereIn('status', ['pending', 'assigned', 'picked_up', 'in_transit', 'confirmed', 'awaiting_confirmation'])
-            ->with('customer')
+            // Get current deliveries
+            $currentDeliveries = Order::where('courier_id', $user->id)
+                ->whereIn('status', ['pending', 'assigned', 'picked_up', 'in_transit', 'confirmed', 'awaiting_confirmation'])
+                ->with('customer')
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function ($order) {
+                    return [
+                        'id' => $order->id,
+                        'order_number' => $order->order_number,
+                        'customer_name' => $order->customer ? $order->customer->name : 'Unknown Customer',
+                        'status' => $order->status,
+                        'item_description' => $order->item_description,
+                        'destination_address' => $order->destination_address,
+                        'created_at' => $order->created_at->format('d M Y H:i'),
+                        'updated_at' => $order->updated_at->format('d M Y H:i')
+                    ];
+                });
+
+            // Get recent completed deliveries
+            $recentCompleted = Order::where('courier_id', $user->id)
+                ->where('status', 'delivered')
+                ->with('customer')
+                ->orderBy('updated_at', 'desc')
+                ->limit(5)
+                ->get()
+                ->map(function ($order) {
+                    return [
+                        'id' => $order->id,
+                        'customer_name' => $order->customer ? $order->customer->name : 'Unknown Customer',
+                        'item_description' => $order->item_description,
+                        'total_cost' => $order->total_amount,
+                        'completed_at' => $order->updated_at->format('d M Y H:i')
+                    ];
+                });
+
+            // Get recent complaints related to courier's orders
+            $recentComplaints = \App\Models\Complaint::whereHas('order', function($query) use ($user) {
+                $query->where('courier_id', $user->id);
+            })
+            ->with(['user', 'order'])
             ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function ($order) {
-                return [
-                    'id' => $order->id,
-                    'order_number' => $order->order_number,
-                    'customer_name' => $order->customer ? $order->customer->name : 'Unknown Customer',
-                    'status' => $order->status,
-                    'item_description' => $order->item_description,
-                    'destination_address' => $order->destination_address,
-                    'created_at' => $order->created_at->format('d M Y H:i'),
-                    'updated_at' => $order->updated_at->format('d M Y H:i')
-                ];
-            });
-
-        // Get recent completed deliveries
-        $recentCompleted = Order::where('courier_id', $user->id)
-            ->where('status', 'delivered')
-            ->with('customer')
-            ->orderBy('updated_at', 'desc')
             ->limit(5)
             ->get()
-            ->map(function ($order) {
+            ->map(function ($complaint) {
                 return [
-                    'id' => $order->id,
-                    'customer_name' => $order->customer ? $order->customer->name : 'Unknown Customer',
-                    'item_description' => $order->item_description,
-                    'total_cost' => $order->total_amount,
-                    'completed_at' => $order->updated_at->format('d M Y H:i')
+                    'id' => $complaint->id,
+                    'title' => $complaint->title,
+                    'type' => $complaint->type,
+                    'status' => $complaint->status,
+                    'priority' => $complaint->priority,
+                    'customer_name' => $complaint->user ? $complaint->user->name : 'Unknown Customer',
+                    'order_id' => $complaint->order ? $complaint->order->id : null,
+                    'created_at' => $complaint->created_at->format('d M Y H:i')
                 ];
             });
 
-        // Get recent complaints related to courier's orders
-        $recentComplaints = \App\Models\Complaint::whereHas('order', function($query) use ($user) {
-            $query->where('courier_id', $user->id);
-        })
-        ->with(['user', 'order'])
-        ->orderBy('created_at', 'desc')
-        ->limit(5)
-        ->get()
-        ->map(function ($complaint) {
-            return [
-                'id' => $complaint->id,
-                'title' => $complaint->title,
-                'type' => $complaint->type,
-                'status' => $complaint->status,
-                'priority' => $complaint->priority,
-                'customer_name' => $complaint->user ? $complaint->user->name : 'Unknown Customer',
-                'order_id' => $complaint->order ? $complaint->order->id : null,
-                'created_at' => $complaint->created_at->format('d M Y H:i')
-            ];
-        });
+            // Clean any output buffers that may have been created (from MadelineProto warnings)
+            $this->safeCleanOutputBuffers();
 
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'assignedOrders' => $assignedOrders,
-                'inProgressOrders' => $inProgressOrders,
-                'completedToday' => $completedToday,
-                'totalDelivered' => $totalDelivered,
-                'currentDeliveries' => $currentDeliveries,
-                'recentCompleted' => $recentCompleted,
-                'recentComplaints' => $recentComplaints,
-                'timestamp' => now()->format('Y-m-d H:i:s'),
-                'timezone' => 'WITA'
-            ]
-        ]);
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'assignedOrders' => $assignedOrders,
+                    'inProgressOrders' => $inProgressOrders,
+                    'completedToday' => $completedToday,
+                    'totalDelivered' => $totalDelivered,
+                    'currentDeliveries' => $currentDeliveries,
+                    'recentCompleted' => $recentCompleted,
+                    'recentComplaints' => $recentComplaints,
+                    'timestamp' => now()->format('Y-m-d H:i:s'),
+                    'timezone' => 'WITA'
+                ]
+            ]);
+        } catch (\Exception $e) {
+            // Clean output buffer on error
+            $this->safeCleanOutputBuffers();
+            
+            $user = Auth::user();
+            Log::error('Error getting dashboard data', [
+                'courier_id' => $user->id ?? null,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memuat data dashboard'
+            ], 500);
+        }
     }
 
     /**
      * Safely clean output buffers
      */
-    private function safeCleanOutputBuffers(): void
+    protected function safeCleanOutputBuffers(): void
     {
         while (ob_get_level() > 0) {
             @ob_end_clean();

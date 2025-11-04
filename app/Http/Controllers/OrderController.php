@@ -33,11 +33,20 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
+        // Start output buffering to catch any unexpected output from MadelineProto
+        $initialObLevel = ob_get_level();
+        if ($initialObLevel === 0) {
+            ob_start();
+        }
+        
         try {
             $user = $request->user();
             $filters = $request->only(['status', 'shipping_method', 'date_from', 'date_to', 'sort']);
 
             $orders = $this->orderService->getOrdersByUser($user, $filters);
+
+            // Clean any output buffers that may have been created (from MadelineProto warnings)
+            $this->safeCleanOutputBuffers();
 
             if ($request->expectsJson()) {
                 return response()->json([
@@ -50,6 +59,9 @@ class OrderController extends Controller
             return view('orders.index', compact('orders'));
 
         } catch (\Exception $e) {
+            // Clean output buffer on error
+            $this->safeCleanOutputBuffers();
+            
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,
@@ -915,10 +927,10 @@ class OrderController extends Controller
     /**
      * Safely clean all output buffers to prevent contamination of JSON responses
      */
-    // private function safeCleanOutputBuffers(): void
-    // {
-    //     while (ob_get_level() > 0) {
-    //         @ob_end_clean();
-    //     }
-    // }
+    protected function safeCleanOutputBuffers(): void
+    {
+        while (ob_get_level() > 0) {
+            @ob_end_clean();
+        }
+    }
 }

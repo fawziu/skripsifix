@@ -285,6 +285,27 @@ document.addEventListener('DOMContentLoaded', function() {
     setInterval(updateDashboardData, 30000);
 });
 
+// Helper function to safely parse JSON response
+function parseJsonResponse(response) {
+    // Check if response is actually JSON before parsing
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+        return response.text().then(text => {
+            // Try to extract JSON from response if it's mixed with other output
+            const jsonMatch = text.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                try {
+                    return JSON.parse(jsonMatch[0]);
+                } catch (e) {
+                    throw new Error('Invalid JSON in response: ' + text.substring(0, 200));
+                }
+            }
+            throw new Error('Response is not JSON: ' + text.substring(0, 200));
+        });
+    }
+    return response.json();
+}
+
 function updateDashboardData() {
     fetch('/customer/dashboard/data', {
         method: 'GET',
@@ -293,7 +314,7 @@ function updateDashboardData() {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
         }
     })
-    .then(response => response.json())
+    .then(response => parseJsonResponse(response))
     .then(data => {
         if (data.success) {
             // Update statistics

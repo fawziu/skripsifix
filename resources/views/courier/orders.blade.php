@@ -164,10 +164,31 @@
 <script>
 let currentOrderId = null;
 
+// Helper function to safely parse JSON response
+function parseJsonResponse(response) {
+    // Check if response is actually JSON before parsing
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+        return response.text().then(text => {
+            // Try to extract JSON from response if it's mixed with other output
+            const jsonMatch = text.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                try {
+                    return JSON.parse(jsonMatch[0]);
+                } catch (e) {
+                    throw new Error('Invalid JSON in response: ' + text.substring(0, 200));
+                }
+            }
+            throw new Error('Response is not JSON: ' + text.substring(0, 200));
+        });
+    }
+    return response.json();
+}
+
 // Load orders data
 function loadOrders() {
     fetch('/courier/dashboard/data')
-        .then(response => response.json())
+        .then(response => parseJsonResponse(response))
         .then(data => {
             if (data.success) {
                 updateStatistics(data.data);
@@ -179,7 +200,7 @@ function loadOrders() {
         })
         .catch(error => {
             console.error('Error loading orders:', error);
-            showError('Terjadi kesalahan saat memuat data pesanan');
+            showError('Terjadi kesalahan saat memuat data pesanan: ' + (error.message || 'Unknown error'));
         });
 }
 
@@ -331,7 +352,7 @@ document.getElementById('status-form').addEventListener('submit', function(e) {
             notes: notes
         })
     })
-    .then(response => response.json())
+    .then(response => parseJsonResponse(response))
     .then(data => {
         if (data.success) {
             // Telegram notification is sent automatically via TelegramClientService
@@ -345,7 +366,7 @@ document.getElementById('status-form').addEventListener('submit', function(e) {
     })
     .catch(error => {
         console.error('Error updating status:', error);
-        alert('Terjadi kesalahan saat mengupdate status');
+        alert('Terjadi kesalahan saat mengupdate status: ' + (error.message || 'Unknown error'));
     });
 });
 

@@ -40,6 +40,12 @@ class TrackingController extends Controller
      */
     public function updateLocation(Request $request, Order $order): JsonResponse
     {
+        // Start output buffering to catch any unexpected output from MadelineProto
+        $initialObLevel = ob_get_level();
+        if ($initialObLevel === 0) {
+            ob_start();
+        }
+        
         $validator = Validator::make($request->all(), [
             'latitude' => 'required|numeric|between:-90,90',
             'longitude' => 'required|numeric|between:-180,180',
@@ -49,6 +55,7 @@ class TrackingController extends Controller
         ]);
 
         if ($validator->fails()) {
+            $this->safeCleanOutputBuffers();
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
@@ -61,6 +68,7 @@ class TrackingController extends Controller
 
             // Check if user has access to this order
             if (!$user->isAdmin() && $order->customer_id !== $user->id && $order->courier_id !== $user->id) {
+                $this->safeCleanOutputBuffers();
                 return response()->json([
                     'success' => false,
                     'message' => 'Access denied',
@@ -83,12 +91,18 @@ class TrackingController extends Controller
                 'tracked_at' => now(),
             ]);
 
+            // Clean any output buffers that may have been created (from MadelineProto warnings)
+            $this->safeCleanOutputBuffers();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Location updated successfully',
             ]);
 
         } catch (\Exception $e) {
+            // Clean output buffer on error
+            $this->safeCleanOutputBuffers();
+            
             \Log::error('Tracking updateLocation error: ' . $e->getMessage(), [
                 'order_id' => $order->id,
                 'user_id' => Auth::id(),
@@ -108,11 +122,18 @@ class TrackingController extends Controller
      */
     public function getLocations(Order $order): JsonResponse
     {
+        // Start output buffering to catch any unexpected output from MadelineProto
+        $initialObLevel = ob_get_level();
+        if ($initialObLevel === 0) {
+            ob_start();
+        }
+        
         try {
             $user = Auth::user();
 
             // Check if user has access to this order
             if (!$user->isAdmin() && $order->customer_id !== $user->id && $order->courier_id !== $user->id) {
+                $this->safeCleanOutputBuffers();
                 return response()->json([
                     'success' => false,
                     'message' => 'Access denied',
@@ -157,6 +178,9 @@ class TrackingController extends Controller
                     ->groupBy('user_type');
             }
 
+            // Clean any output buffers that may have been created (from MadelineProto warnings)
+            $this->safeCleanOutputBuffers();
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -168,6 +192,9 @@ class TrackingController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            // Clean output buffer on error
+            $this->safeCleanOutputBuffers();
+            
             \Log::error('Tracking getLocations error: ' . $e->getMessage(), [
                 'order_id' => $order->id,
                 'user_id' => Auth::id(),
@@ -186,11 +213,18 @@ class TrackingController extends Controller
      */
     public function startTracking(Order $order): JsonResponse
     {
+        // Start output buffering to catch any unexpected output from MadelineProto
+        $initialObLevel = ob_get_level();
+        if ($initialObLevel === 0) {
+            ob_start();
+        }
+        
         try {
             $user = Auth::user();
 
             // Check if user has access to this order
             if (!$user->isAdmin() && $order->customer_id !== $user->id && $order->courier_id !== $user->id) {
+                $this->safeCleanOutputBuffers();
                 return response()->json([
                     'success' => false,
                     'message' => 'Access denied',
@@ -199,11 +233,15 @@ class TrackingController extends Controller
 
             // Check if order is in a trackable status
             if (!in_array($order->status, ['assigned', 'picked_up', 'in_transit', 'awaiting_confirmation'])) {
+                $this->safeCleanOutputBuffers();
                 return response()->json([
                     'success' => false,
                     'message' => 'Order is not in a trackable status',
                 ], 400);
             }
+
+            // Clean any output buffers that may have been created (from MadelineProto warnings)
+            $this->safeCleanOutputBuffers();
 
             return response()->json([
                 'success' => true,
@@ -216,10 +254,23 @@ class TrackingController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            // Clean output buffer on error
+            $this->safeCleanOutputBuffers();
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to start tracking: ' . $e->getMessage(),
             ], 500);
+        }
+    }
+
+    /**
+     * Safely clean all output buffers to prevent contamination of JSON responses
+     */
+    protected function safeCleanOutputBuffers(): void
+    {
+        while (ob_get_level() > 0) {
+            @ob_end_clean();
         }
     }
 }
